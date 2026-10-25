@@ -92,6 +92,19 @@ Graphviz can route relationships through unrelated group boxes or place parallel
 
 Edited edges that share a straight segment move onto separate tracks where space at their endpoints permits. Unedited Graphviz routes keep their positions. Automatic label placement avoids nodes, other labels, and routes where space permits; dense views can still contain overlaps.
 
+## Node placement
+
+To place the neighbours of a system on a frame around it instead of Graphviz ranks, set `placement surround` in an element view:
+
+```likec4
+view of cloud {
+  placement surround
+  include *
+}
+```
+
+Values are `ranked` (default) and `surround`. With `surround`, relationships have only horizontal and vertical segments, and node positions and routes are chosen to minimise crossings on a sheet close to 16:9. It applies to element views with at most one expanded element whose relationships connect leaf nodes; other views keep `ranked` placement.
+
 ## Dynamic View Rules
 
 Syntax:

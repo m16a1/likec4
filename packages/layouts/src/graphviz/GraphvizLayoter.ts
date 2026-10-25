@@ -14,6 +14,7 @@ import { nonexhaustive } from '@likec4/core/utils'
 import { loggable, rootLogger as mainLogger, wrapError } from '@likec4/log'
 import { randomString } from 'remeda'
 import { calcSequenceLayout } from '../sequence'
+import { surroundLayout } from '../surround/surround-layout'
 import type { AILayoutHints } from './ai/types'
 import { AiLayoutViewPrinter } from './AiLayoutPrinter'
 import { DeploymentViewPrinter } from './DeploymentViewPrinter'
@@ -143,6 +144,11 @@ export class GraphvizLayouter implements Disposable {
             sequenceLayout: calcSequenceLayout(diagram),
           } satisfies Partial<LayoutedDynamicView<A>>,
         )
+      }
+
+      // Graphviz provides node sizes and labels, `surround` re-places nodes and routes edges
+      if (isElementView(diagram) && diagram.placement === 'surround') {
+        diagram = surroundLayout(diagram) ?? diagram
       }
 
       dot = normalizeDot(dot)

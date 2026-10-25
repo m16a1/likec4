@@ -120,6 +120,7 @@ export function ViewsParser<TBase extends WithPredicates & WithDeploymentView>(B
       const links = this.convertLinks(body)
       const order = parseViewOrder(props.find(ast.isViewOrderProperty))
       const routing = parseViewRouting(props, body.rules)
+      const placement = props.find(ast.isViewPlacementProperty)?.value
 
       const view: ParsedAstElementView = {
         [c4._type]: 'element',
@@ -129,6 +130,7 @@ export function ViewsParser<TBase extends WithPredicates & WithDeploymentView>(B
         description,
         ...(order !== undefined && { order }),
         ...(routing && { routing }),
+        ...(placement === 'surround' && { placement }),
         tags,
         links: isNonEmptyArray(links) ? links : null,
         rules: [

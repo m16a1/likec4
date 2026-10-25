@@ -96,6 +96,12 @@ export type ViewType = 'element' | 'dynamic' | 'deployment'
 /** Edge routing of a view: curved `spline` (default) or `ortho` with right-angle bends. */
 export type EdgeRouting = 'spline' | 'ortho'
 
+/**
+ * Node placement of an element view: `ranked` Graphviz layers (default), or `surround` with the
+ * neighbours framed around the system and orthogonal arrows chosen to cross less.
+ */
+export type ViewPlacement = 'ranked' | 'surround'
+
 export interface BaseViewProperties<A extends AnyAux> extends aux.WithOptionalTags<A>, aux.WithOptionalLinks {
   readonly id: aux.StrictViewId<A>
   readonly title: string | null
@@ -109,6 +115,10 @@ export interface BaseViewProperties<A extends AnyAux> extends aux.WithOptionalTa
    * when absent, treat it as `spline`.
    */
   readonly routing?: EdgeRouting
+  /**
+   * Node placement, element views only. Set only when it is `surround`; when absent, treat it as `ranked`.
+   */
+  readonly placement?: 'surround'
   /**
    * Source file containing this view, relative to the project root.
    * Undefined if the view is auto-generated.

@@ -172,6 +172,26 @@ describe('view', () => {
     `)
   })
 
+  it('should print view placement', () => {
+    expect(
+      view(
+        'index',
+        {
+          placement: 'surround',
+        },
+        $include('*'),
+      ),
+    ).toMatchInlineSnapshot(`
+      "views {
+        view index {
+          placement surround
+          
+          include *
+        }
+      }"
+    `)
+  })
+
   it('should print multiple element views', () => {
     expect(
       view(

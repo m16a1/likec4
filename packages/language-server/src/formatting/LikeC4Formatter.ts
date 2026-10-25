@@ -337,6 +337,7 @@ export class LikeC4Formatter extends AbstractFormatter {
       || ast.isViewStringProperty(node)
       || ast.isViewOrderProperty(node)
       || ast.isViewRoutingProperty(node)
+      || ast.isViewPlacementProperty(node)
       || ast.isNotationProperty(node)
       || ast.isNotesProperty(node)
       || ast.isSpecificationElementStringProperty(node)
@@ -365,6 +366,7 @@ export class LikeC4Formatter extends AbstractFormatter {
         'descriptionFile',
         'order',
         'routing',
+        'placement',
         'technology',
         'summary',
         'notation',

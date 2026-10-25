@@ -220,6 +220,7 @@ export const elementView = zodOp(schemas.views.elementView.partial({ _type: true
           viewTitleProperty(),
           property('order'),
           property('routing'),
+          property('placement'),
           descriptionProperty(),
           linksProperty(),
         ),

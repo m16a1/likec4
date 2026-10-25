@@ -211,6 +211,7 @@ export interface ParsedAstElementView {
    */
   order?: number
   routing?: c4.EdgeRouting
+  placement?: 'surround'
   tags: c4.NonEmptyArray<c4.Tag> | null
   links: c4.NonEmptyArray<c4.Link> | null
   rules: c4.ElementViewRule[]

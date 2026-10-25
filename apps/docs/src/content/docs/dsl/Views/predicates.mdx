@@ -948,6 +948,31 @@ Edited edges that share a straight segment move onto separate tracks where space
 
 Automatic labels avoid nodes, other labels, and relationship lines where space permits. Dense views can still contain label overlaps if no clear position is available.
 
+## Node placement
+
+By default, Graphviz places nodes in ranks, so the neighbours of a system often end up in one long row.
+To place the neighbours around the system instead, set `placement surround` in an element view:
+
+```likec4
+view of cloud {
+  placement surround
+  include *
+}
+```
+
+With `surround` placement:
+
+- the neighbours are placed on a frame around the system, on all four sides, keeping the sheet close to 16:9;
+- every relationship has only horizontal and vertical segments, as with `routing ortho`;
+- the positions of nodes and the shape of each route are chosen to minimise crossings, routes on top of or too close to each other, and routes through or along unrelated nodes.
+
+The result is deterministic: the same view always produces the same layout.
+Node sizes stay as defined by their style; smaller neighbours, such as `size sm`, leave more room for routes.
+
+`surround` applies to element views with at most one expanded element (for example, a view of a system with its children shown and its neighbours around it), when all relationships connect leaf nodes. Without an expanded element, the most connected node is placed in the centre and grows so its relationships fit around it. Other views keep the default `ranked` placement.
+
+Views with more than a hundred relationships take a few seconds to lay out and are hard to read with any placement; consider splitting them.
+
 
 ## Extend views
 

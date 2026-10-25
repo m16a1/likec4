@@ -397,7 +397,7 @@ type AnyProperty =
 ;
 
 ViewProperty:
-  ViewStringProperty | ViewOrderProperty | LinkProperty | DescriptionFileProperty | ViewRoutingProperty
+  ViewStringProperty | ViewOrderProperty | LinkProperty | DescriptionFileProperty | ViewRoutingProperty | ViewPlacementProperty
 ;
 
 ViewStringProperty:
@@ -411,6 +411,13 @@ ViewRoutingProperty:
 
 EdgeRoutingValue returns string:
   'spline' | 'ortho';
+
+// Node placement of element views
+ViewPlacementProperty:
+  key='placement' ':'? value=ViewPlacementValue ';'?;
+
+ViewPlacementValue returns string:
+  'ranked' | 'surround';
 
 ViewLayoutDirection returns string:
   'TopBottom' | 'LeftRight' | 'BottomTop' | 'RightLeft';
@@ -1277,8 +1284,9 @@ Id returns string:
   SizingValue |
   RankValue |
   EdgeRoutingValue |
+  ViewPlacementValue |
   // Allow reserved keywords as Id
-  'element' | 'model' | 'group' | 'node' | 'deployment' | 'instance' | 'relationship' | 'diff' | 'add' | 'remove' | 'routing';
+  'element' | 'model' | 'group' | 'node' | 'deployment' | 'instance' | 'relationship' | 'diff' | 'add' | 'remove' | 'routing' | 'placement';
 
 HashId returns string:
   Hash Id;

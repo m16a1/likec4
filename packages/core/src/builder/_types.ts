@@ -139,6 +139,10 @@ export type NewViewProps<Tag> = {
    * Edge routing: `spline` for curves or `ortho` for right-angle bends. Inherits the project default when omitted.
    */
   routing?: EdgeRouting
+  /**
+   * Node placement of element views: `surround` frames the neighbours around the system. Graphviz ranks when omitted.
+   */
+  placement?: 'surround'
   tags?: [Tag, ...Tag[]]
   links?: Array<string | { title?: string; url: string }>
 }

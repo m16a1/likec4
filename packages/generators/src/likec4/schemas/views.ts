@@ -178,6 +178,7 @@ export const elementView = defineView({
   _type: z.literal('element'),
   viewOf: common.fqn.nullish(),
   extends: common.viewId.nullish(),
+  placement: z.literal(['ranked', 'surround']).optional(),
   rules: z.array(elementViewRule).optional().default([]),
 })
 export type ZElementView = typeof elementView
