@@ -6,6 +6,7 @@ import type * as scalar from './scalar'
 import type {
   EdgeRouting,
   ViewAutoLayout,
+  ViewPlacement,
   ViewType,
   ViewWithNotation,
 } from './view-common'
@@ -63,6 +64,8 @@ type ViewManualLayoutSnapshotPerType = Simplify<
   & (
     | {
       readonly [_type]: 'element'
+      // Placement when saved; applying the snapshot uses the view's current placement.
+      readonly placement?: ViewPlacement
       readonly viewOf?: scalar.Fqn
       readonly extends?: scalar.ViewId
     }

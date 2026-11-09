@@ -78,6 +78,23 @@ describe('applyManualLayout', () => {
     })
   })
 
+  describe('placement', () => {
+    it.each(['ranked', 'surround'] as const)('copies %s placement while preserving manual positions', placement => {
+      const { result, snapshot } = testApplyManualLayout({ view: { placement } })
+      expect(result.placement).toBe(placement)
+      expect(result.drifts).toBeUndefined()
+      expect(result.nodes.map(n => [n.x, n.y])).toEqual(snapshot.nodes.map(n => [n.x, n.y]))
+      expect(result.edges.map(e => e.points)).toEqual(snapshot.edges.map(e => e.points))
+    })
+
+    it('drops the snapshot placement when the latest view uses the default', () => {
+      const { snapshot, layouted } = prepareFixtures()
+      const result = applyManualLayout(layouted, { ...snapshot, placement: 'ranked' })
+      expect(result).not.toHaveProperty('placement')
+      expect(result.drifts).toBeUndefined()
+    })
+  })
+
   describe('nodes', () => {
     it('should detect nodes-added drift', () => {
       const { result } = testApplyManualLayout({

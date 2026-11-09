@@ -94,16 +94,16 @@ Edited edges that share a straight segment move onto separate tracks where space
 
 ## Node placement
 
-To place the neighbours of a system on a frame around it instead of Graphviz ranks, set `placement surround` in an element view:
+Element views use `surround` placement by default, placing the neighbours on a frame around the system. To use Graphviz ranks instead, set `placement ranked`:
 
 ```likec4
 view of cloud {
-  placement surround
+  placement ranked
   include *
 }
 ```
 
-Values are `ranked` (default) and `surround`. With `surround`, relationships have only horizontal and vertical segments, and node positions and routes are chosen to minimise crossings on a sheet close to 16:9. It applies to element views with at most one expanded element whose relationships connect leaf nodes; other views keep `ranked` placement.
+Values are `surround` (default) and `ranked`. With `surround`, relationships have only horizontal and vertical segments, and node positions and routes are chosen to minimise crossings on a sheet close to 16:9. It applies to element views with at most one expanded element whose relationships connect leaf nodes; unsupported views fall back to `ranked` placement. Dynamic and deployment views use Graphviz ranks.
 
 ## Dynamic View Rules
 

@@ -10,7 +10,7 @@ export function calcViewLayoutHash<V extends ComputedView<any>>(view: SetOptiona
     autoLayout: view.autoLayout,
     // Include resolved orthogonal routing while preserving hashes for spline views.
     ...(view.routing && { routing: view.routing }),
-    ...(view.placement && { placement: view.placement }),
+    ...(view._type === 'element' && { placement: view.placement ?? 'surround' }),
     nodes: pipe(
       view.nodes,
       map(n => ({

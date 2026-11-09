@@ -950,12 +950,12 @@ Automatic labels avoid nodes, other labels, and relationship lines where space p
 
 ## Node placement
 
-By default, Graphviz places nodes in ranks, so the neighbours of a system often end up in one long row.
-To place the neighbours around the system instead, set `placement surround` in an element view:
+Element views use `surround` placement by default, placing the neighbours on a frame around the system.
+To use Graphviz ranks instead, set `placement ranked`:
 
 ```likec4
 view of cloud {
-  placement surround
+  placement ranked
   include *
 }
 ```
@@ -969,7 +969,7 @@ With `surround` placement:
 The result is deterministic: the same view always produces the same layout.
 Node sizes stay as defined by their style; smaller neighbours, such as `size sm`, leave more room for routes.
 
-`surround` applies to element views with at most one expanded element (for example, a view of a system with its children shown and its neighbours around it), when all relationships connect leaf nodes. Without an expanded element, the most connected node is placed in the centre and grows so its relationships fit around it. Other views keep the default `ranked` placement.
+`surround` applies to element views with at most one expanded element (for example, a view of a system with its children shown and its neighbours around it), when all relationships connect leaf nodes. Without an expanded element, the most connected node is placed in the centre and grows so its relationships fit around it. Unsupported views fall back to `ranked` placement. Dynamic and deployment views continue to use Graphviz ranks.
 
 Views with more than a hundred relationships take a few seconds to lay out and are hard to read with any placement; consider splitting them.
 

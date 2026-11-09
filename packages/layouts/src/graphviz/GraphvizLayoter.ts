@@ -147,7 +147,7 @@ export class GraphvizLayouter implements Disposable {
       }
 
       // Graphviz provides node sizes and labels, `surround` re-places nodes and routes edges
-      if (isElementView(diagram) && diagram.placement === 'surround') {
+      if (isElementView(diagram) && diagram.placement !== 'ranked') {
         diagram = surroundLayout(diagram) ?? diagram
       }
 

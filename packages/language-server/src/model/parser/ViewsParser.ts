@@ -128,7 +128,7 @@ export function ViewsParser<TBase extends WithPredicates & WithDeploymentView>(B
         ...this.parseDescriptionFile(body),
         ...(order !== undefined && { order }),
         ...(routing && { routing }),
-        ...(placement === 'surround' && { placement }),
+        ...(placement && { placement }),
         tags,
         links: isNonEmptyArray(links) ? links : null,
         rules: [

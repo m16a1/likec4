@@ -307,6 +307,11 @@ export function applyManualLayout<
     }
 
     if (isElementView(autoLayouted) && draft._type === 'element') {
+      if (autoLayouted.placement) {
+        draft.placement = autoLayouted.placement
+      } else {
+        delete draft.placement
+      }
       if (autoLayouted.viewOf) {
         draft.viewOf = autoLayouted.viewOf
       } else {

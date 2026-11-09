@@ -192,6 +192,12 @@ describe('view', () => {
     `)
   })
 
+  it('should print an explicit ranked placement override', () => {
+    expect(
+      view('index', { placement: 'ranked' }, $include('*')),
+    ).toContain('placement ranked')
+  })
+
   it('should print multiple element views', () => {
     expect(
       view(

@@ -59,7 +59,8 @@ function buildModel() {
     .views(({ view, viewOf, $include, $rules }, _) =>
       _(
         viewOf('surround', 'core', { placement: 'surround' }, $include('*')),
-        viewOf('ranked', 'core', $include('*')),
+        viewOf('default', 'core', $include('*')),
+        viewOf('ranked', 'core', { placement: 'ranked' }, $include('*')),
         view(
           'two-systems',
           { placement: 'surround' },
@@ -70,7 +71,7 @@ function buildModel() {
     .toLikeC4Model()
 }
 
-type ViewId = 'surround' | 'ranked' | 'two-systems'
+type ViewId = 'surround' | 'default' | 'ranked' | 'two-systems'
 
 async function layout(id: ViewId): Promise<LayoutedView> {
   const model = buildModel()
@@ -99,6 +100,13 @@ const contains = (outer: DiagramNode, inner: DiagramNode) =>
   && inner.x + inner.width <= outer.x + outer.width && inner.y + inner.height <= outer.y + outer.height
 
 describe('surround placement', () => {
+  it('uses surround placement when placement is omitted', async ({ expect }) => {
+    const [implicit, explicit] = await Promise.all([layout('default'), layout('surround')])
+    expect(implicit.routing).toBe('ortho')
+    expect(implicit.nodes).toEqual(explicit.nodes)
+    expect(implicit.edges).toEqual(explicit.edges)
+  })
+
   it('routes every arrow with horizontal and vertical segments only', async ({ expect }) => {
     const view = await layout('surround')
     expect(view.routing).toBe('ortho')

@@ -22,6 +22,7 @@ import type {
   TagSpecification,
   TextSize,
   ThemeColor as Color,
+  ViewPlacement,
 } from '../types'
 import type { Builder } from './Builder'
 import type { DeploymentRulesBuilderOp } from './Builder.view-deployment'
@@ -140,9 +141,9 @@ export type NewViewProps<Tag> = {
    */
   routing?: EdgeRouting
   /**
-   * Node placement of element views: `surround` frames the neighbours around the system. Graphviz ranks when omitted.
+   * Node placement of element views: `surround` (default) frames the neighbours around the system.
    */
-  placement?: 'surround'
+  placement?: ViewPlacement
   tags?: [Tag, ...Tag[]]
   links?: Array<string | { title?: string; url: string }>
 }

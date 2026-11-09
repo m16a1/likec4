@@ -128,4 +128,15 @@ describe('calcViewLayoutHash', () => {
       calcViewLayoutHash({ ...view, order: 2 } as any).hash,
     )
   })
+
+  it('hashes omitted placement as surround and distinguishes ranked placement', () => {
+    const view = builder
+      .views(v => v.view('test', v.$include('*')))
+      .toLikeC4Model()
+      .view('test').$view
+
+    const implicit = calcViewLayoutHash({ ...view }).hash
+    expect(calcViewLayoutHash({ ...view, placement: 'surround' }).hash).toBe(implicit)
+    expect(calcViewLayoutHash({ ...view, placement: 'ranked' }).hash).not.toBe(implicit)
+  })
 })

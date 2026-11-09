@@ -106,7 +106,7 @@ describe('GraphvizWasmAdapter:', () => {
       )
       .views(({ view, $include }, _) => _(view('index', $include('*'))))
       .toLikeC4Model()
-    const diagram = await dotLayout({ ...model.view('index').$view, routing: 'ortho' })
+    const diagram = await dotLayout({ ...model.view('index').$view, placement: 'ranked', routing: 'ortho' })
     expect(diagram.edges.some(edge => edge.labelBBox && edge.labelBBox.x < 0)).toBe(true)
     for (const edge of diagram.edges) {
       if (edge.labelBBox) {
