@@ -28,15 +28,21 @@ LikeC4Lib:
     '}'
   '}';
 
-LibIcon: name=IconId;
+LibIcon:
+  name=IconId;
 
 // Specification -------------------------------------
 
-ElementKind: name=Id;
-Tag: name=Id;
-RelationshipKind: name=Id;
-CustomColor: name=CustomColorId;
-DeploymentNodeKind: name=Id;
+ElementKind:
+  name=Id;
+Tag:
+  name=Id;
+RelationshipKind:
+  name=Id;
+CustomColor:
+  name=CustomColorId;
+DeploymentNodeKind:
+  name=Id;
 
 SpecificationRule:
   name='specification' '{'
@@ -142,7 +148,8 @@ Element:
   body=ElementBody?
 ;
 
-ElementBody: '{'
+ElementBody:
+  '{'
   tags=Tags?
   props+=ElementProperty*
   elements+=(
@@ -177,7 +184,8 @@ ExtendElementOrRelation:
   )
 ;
 
-ExtendElementBody:  '{'
+ExtendElementBody:
+  '{'
   tags=Tags?
   props+=ExtendElementProperty*
 
@@ -192,7 +200,8 @@ ExtendElementProperty:
   LinkProperty |
   MetadataProperty;
 
-ExtendRelationBody: '{'
+ExtendRelationBody:
+  '{'
   tags=Tags?
   props+=ExtendRelationProperty*
 '}'
@@ -267,7 +276,8 @@ fragment RelationConnector:
   '->'
 ;
 
-RelationBody: '{'
+RelationBody:
+  '{'
   tags=Tags?
   props+=RelationProperty*
 '}'
@@ -295,7 +305,8 @@ MetadataProperty:
   'metadata' MetadataBody
 ;
 
-MetadataBody: '{'
+MetadataBody:
+  '{'
   props+=(MetadataAttribute)*
 '}'
 ;
@@ -348,14 +359,16 @@ ElementViewRef:
 DynamicViewRef:
   view=[DynamicView];
 
-ElementViewBody: '{'
+ElementViewBody:
+  '{'
   tags=Tags?
   props+=ViewProperty*
   rules+=ViewRule*
 '}'
 ;
 
-DynamicViewBody: '{'
+DynamicViewBody:
+  '{'
   tags=Tags?
   props+=DynamicViewProperty*
   (
@@ -382,8 +395,7 @@ type StringProperty =
   SpecificationElementStringProperty |
   SpecificationRelationshipStringProperty |
   NotationProperty |
-  NotesProperty
-;
+  NotesProperty;
 
 type AnyProperty =
   StringProperty |
@@ -393,8 +405,7 @@ type AnyProperty =
   RelationProperty |
   RelationshipStyleProperty |
   NavigateToProperty |
-  StyleProperty
-;
+  StyleProperty;
 
 ViewProperty:
   ViewStringProperty | ViewOrderProperty | LinkProperty | DescriptionFileProperty | ViewRoutingProperty | ViewPlacementProperty
@@ -504,11 +515,11 @@ NotesProperty:
   key='notes' ':'? value=MarkdownOrString ';'?
 ;
 
-CustomElementProperties: '{'
+CustomElementProperties:
+  '{'
   props+=(
     NavigateToProperty |
     ElementStringProperty |
-    DescriptionFileProperty |
     NotationProperty |
     NotesProperty |
     StyleProperty
@@ -516,11 +527,11 @@ CustomElementProperties: '{'
 '}'
 ;
 
-CustomRelationProperties: '{'
+CustomRelationProperties:
+  '{'
   props+=(
     RelationNavigateToProperty |
     RelationStringProperty |
-    DescriptionFileProperty |
     NotationProperty |
     NotesProperty |
     RelationshipStyleProperty |
@@ -670,8 +681,7 @@ type StepStatement =
   StepOrSeries |
   TryStep |
   AltSteps |
-  SubflowStep
-;
+  SubflowStep;
 
 StepStatement returns StepStatement:
   SubflowStep |
@@ -692,8 +702,7 @@ fragment StepsBlockFragment:
 // Semantic group of dynamic view steps (flow branch)
 
 type SubflowKind =
-  'opt' | 'par' | 'parallel' | 'loop' | 'when' | 'if' | 'else' | 'break'
-;
+  'opt' | 'par' | 'parallel' | 'loop' | 'when' | 'if' | 'else' | 'break';
 SubflowKind returns SubflowKind:
   'opt' | 'par' | 'parallel' | 'loop' | 'when' | 'if' | 'else' | 'break'
 ;
@@ -720,7 +729,7 @@ StepsBlock returns StepsBlock:
 // -----------------------------------------------
 // Dynamic view TRY block
 
-interface TryBlock extends StepsBlock  {
+interface TryBlock extends StepsBlock {
   /// Optional title for the try block
   title?: string
 }
@@ -818,18 +827,14 @@ StepSeries returns StepSeries:
   Step
   ({StepSeries.source=current}
     (dotKind=RelationKindDotRef | '->' | '-[' kind=[RelationshipKind] ']->')
-      target=ElementRef
-      title=String?
-      custom=CustomRelationProperties?
+      StepTarget
   )*
 ;
 
 Step returns Step:
   source=ElementRef
   (isBackward?='<-' | dotKind=RelationKindDotRef | '->' | '-[' kind=[RelationshipKind] ']->')
-  target=ElementRef
-  title=String?
-  custom=CustomRelationProperties?
+  StepTarget
 ;
 
 // Deployment -------------------------------------
@@ -857,7 +862,8 @@ DeploymentNode:
   body=DeploymentNodeBody?
 ;
 
-DeploymentNodeBody: '{'
+DeploymentNodeBody:
+  '{'
   tags=Tags?
   props+=ElementProperty*
   elements+=(
@@ -879,7 +885,8 @@ DeployedInstance:
   ';'?
 ;
 
-DeployedInstanceBody: '{'
+DeployedInstanceBody:
+  '{'
   tags=Tags?
   props+=ElementProperty*
   elements+=(
@@ -891,7 +898,8 @@ ExtendDeployment:
   'extend' deploymentNode=StrictFqnRef body=ExtendDeploymentBody
 ;
 
-ExtendDeploymentBody:  '{'
+ExtendDeploymentBody:
+  '{'
   tags=Tags?
   props+=ExtendElementProperty*
 
@@ -917,7 +925,8 @@ DeploymentRelation<isExplicit>:
   body=DeploymentRelationBody?
 ;
 
-DeploymentRelationBody: '{'
+DeploymentRelationBody:
+  '{'
   tags=Tags?
   props+=RelationProperty*
 '}'
@@ -927,7 +936,8 @@ DeploymentView:
   'deployment' 'view' name=Id body=DeploymentViewBody?
 ;
 
-DeploymentViewBody: '{'
+DeploymentViewBody:
+  '{'
   tags=Tags?
   props+=ViewProperty*
   rules+=DeploymentViewRule*

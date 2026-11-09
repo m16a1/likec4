@@ -6,7 +6,7 @@
 // Portions of this file have been modified by NVIDIA CORPORATION & AFFILIATES.
 
 import * as c4 from '@likec4/core'
-import { type ModelFqnExpr, invariant, isNonEmptyArray, nonexhaustive } from '@likec4/core'
+import { type ModelFqnExpr, exact, invariant, isNonEmptyArray, nonexhaustive } from '@likec4/core'
 import { filter, find, isDefined, isEmpty, isNumber, isTruthy, last, mapToObj, pipe } from 'remeda'
 import type { Except, Writable } from 'type-fest'
 import {
@@ -104,14 +104,11 @@ export function ViewsParser<TBase extends WithPredicates & WithDeploymentView>(B
         ) as c4.ViewId
       }
 
-      const viewBodyProps = {
-        ...pipe(
-          props,
-          filter(ast.isViewStringProperty),
-          mapToObj(p => [p.key, p.value as ast.MarkdownOrString | undefined]),
-        ),
-        ...this.descriptionFileOf(props),
-      }
+      const viewBodyProps = pipe(
+        props,
+        filter(ast.isViewStringProperty),
+        mapToObj(p => [p.key, p.value]),
+      )
       const { title = null, description = null } = this.parseBaseProps(viewBodyProps, {
         title: parseTitleKeepingEscapedSlash(viewBodyProps.title),
       })
@@ -122,12 +119,13 @@ export function ViewsParser<TBase extends WithPredicates & WithDeploymentView>(B
       const routing = parseViewRouting(props, body.rules)
       const placement = props.find(ast.isViewPlacementProperty)?.value
 
-      const view: ParsedAstElementView = {
+      const view: ParsedAstElementView = exact({
         [c4._type]: 'element',
         id: id as c4.ViewId,
         astPath,
         title: toSingleLine(title) ?? null,
         description,
+        ...this.parseDescriptionFile(body),
         ...(order !== undefined && { order }),
         ...(routing && { routing }),
         ...(placement === 'surround' && { placement }),
@@ -138,7 +136,7 @@ export function ViewsParser<TBase extends WithPredicates & WithDeploymentView>(B
           ...this.tryMap('views', body.rules, r => this.parseElementViewRule(r)),
         ],
         ...(viewOf && { viewOf }),
-      }
+      })
       ViewOps.writeId(astNode, view.id)
 
       if ('extends' in astNode) {
@@ -289,14 +287,11 @@ export function ViewsParser<TBase extends WithPredicates & WithDeploymentView>(B
         ) as c4.ViewId
       }
 
-      const dynamicViewBodyProps = {
-        ...pipe(
-          props,
-          filter(ast.isViewStringProperty),
-          mapToObj(p => [p.key, p.value as ast.MarkdownOrString | undefined]),
-        ),
-        ...this.descriptionFileOf(props),
-      }
+      const dynamicViewBodyProps = pipe(
+        props,
+        filter(ast.isViewStringProperty),
+        mapToObj(p => [p.key, p.value as ast.MarkdownOrString | undefined]),
+      )
       const { title = null, description = null } = this.parseBaseProps(dynamicViewBodyProps, {
         title: parseTitleKeepingEscapedSlash(dynamicViewBodyProps.title),
       })
@@ -310,12 +305,13 @@ export function ViewsParser<TBase extends WithPredicates & WithDeploymentView>(B
       const variant = find(props, ast.isDynamicViewDisplayVariantProperty)?.value
       const routing = parseViewRouting(props, body.rules)
 
-      return {
+      return exact({
         [c4._type]: 'dynamic',
         id: id as c4.ViewId,
         astPath,
         title: toSingleLine(title) ?? null,
         description,
+        ...this.parseDescriptionFile(body),
         ...(order !== undefined && { order }),
         ...(routing && { routing }),
         tags,
@@ -326,7 +322,7 @@ export function ViewsParser<TBase extends WithPredicates & WithDeploymentView>(B
           ...this.tryMap('views', body.rules, n => this.parseDynamicViewRule(n)),
         ],
         steps: this.parseSteps(body.steps),
-      }
+      })
     }
 
     parseDynamicViewRule(astRule: ast.DynamicViewRule): c4.DynamicViewRule {
@@ -487,13 +483,6 @@ export function ViewsParser<TBase extends WithPredicates & WithDeploymentView>(B
               const viewId = prop.value.view.ref?.name
               if (isTruthy(viewId)) {
                 step.navigateTo = viewId as c4.ViewId
-              }
-              break
-            }
-            case ast.isDescriptionFileProperty(prop): {
-              const value = this.parseDescriptionProperty(prop)
-              if (value) {
-                step.description = value
               }
               break
             }
