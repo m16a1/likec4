@@ -72,6 +72,40 @@ export function circularOrder(
   const orient = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number) =>
     (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
 
+  const outerHeads = new Int32Array(m)
+  const outerNext = new Int32Array(outerEdges.length)
+  const outerEnds = new Int32Array(outerEdges.length)
+  const outerTree = new Int32Array(m + 1)
+  const prefix = (slot: number) => {
+    let count = 0
+    for (let i = slot + 1; i > 0; i -= i & -i) count += outerTree[i]!
+    return count
+  }
+  const countOuterCrossings = () => {
+    outerHeads.fill(-1)
+    outerTree.fill(0)
+    for (let e = 0; e < outerEdges.length; e++) {
+      const [s, t] = outerEdges[e]!
+      const a = slotOf.get(s)!, b = slotOf.get(t)!
+      const lo = Math.min(a, b)
+      outerEnds[e] = Math.max(a, b)
+      outerNext[e] = outerHeads[lo]!
+      outerHeads[lo] = e
+    }
+    let total = 0
+    for (let slot = 0; slot < m; slot++) {
+      // Query the complete group before inserting it: shared endpoints do not cross.
+      const before = prefix(slot)
+      for (let e = outerHeads[slot]!; e !== -1; e = outerNext[e]!) {
+        total += prefix(outerEnds[e]! - 1) - before
+      }
+      for (let e = outerHeads[slot]!; e !== -1; e = outerNext[e]!) {
+        for (let i = outerEnds[e]! + 1; i <= m; i += i & -i) outerTree[i]!++
+      }
+    }
+    return total
+  }
+
   // Reuse each edge/vertex orientation across all pairs containing that vertex.
   // Bound the projection and topology tables to 32 MiB each.
   const nodes = graph.sizes.length
@@ -173,6 +207,9 @@ export function circularOrder(
       }
     }
     // arrows between outer nodes cross when their ends interleave on the circle
+    if (optimized && outerEdges.length >= 64) {
+      return total + countOuterCrossings()
+    }
     for (let i = 0; i < outerEdges.length; i++) {
       const a = slotOf.get(outerEdges[i]![0])!, b = slotOf.get(outerEdges[i]![1])!
       const lo = Math.min(a, b), hi = Math.max(a, b)

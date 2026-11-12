@@ -14,7 +14,7 @@ import { nonexhaustive } from '@likec4/core/utils'
 import { loggable, rootLogger as mainLogger, wrapError } from '@likec4/log'
 import { randomString } from 'remeda'
 import { calcSequenceLayout } from '../sequence'
-import { surroundLayout } from '../surround/surround-layout'
+import { type SurroundLayoutOptions, surroundLayout } from '../surround/surround-layout'
 import type { AILayoutHints } from './ai/types'
 import { AiLayoutViewPrinter } from './AiLayoutPrinter'
 import { DeploymentViewPrinter } from './DeploymentViewPrinter'
@@ -72,7 +72,8 @@ function normalizeDot(dot: DotSource): DotSource {
 export class GraphvizLayouter implements Disposable {
   private graphviz: GraphvizPort
 
-  constructor(graphviz?: GraphvizPort) {
+  /** Create a layouter, optionally configuring surround searches and their cache storage. */
+  constructor(graphviz?: GraphvizPort, private readonly surroundOptions: SurroundLayoutOptions = {}) {
     this.graphviz = graphviz ?? new GraphvizWasmAdapter()
     rootLogger.trace`created with port ${this.graphviz.name}`
   }
@@ -148,7 +149,7 @@ export class GraphvizLayouter implements Disposable {
 
       // Graphviz provides node sizes and labels, `surround` re-places nodes and routes edges
       if (isElementView(diagram) && diagram.placement !== 'ranked') {
-        diagram = surroundLayout(diagram) ?? diagram
+        diagram = surroundLayout(diagram, this.surroundOptions) ?? diagram
       }
 
       dot = normalizeDot(dot)

@@ -9,3 +9,5 @@ export type { DotSource } from './graphviz/types'
 export { GraphvizLayouter, GraphvizWasmAdapter, QueueGraphvizLayoter }
 
 export { layoutLikeC4Model } from './graphviz/layout-model'
+export type { SurroundPlacement, SurroundPlacementCache } from './surround/placement-cache'
+export type { SurroundLayoutOptions } from './surround/surround-layout'

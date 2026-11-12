@@ -1,0 +1,251 @@
+{
+  "baselineCommit": "3fec5f427",
+  "node": "v26.13.0",
+  "date": "2026-11-13",
+  "scope": "Surround placement after Graphviz sizing; imports, fixture generation, and metric collection excluded",
+  "sampling": "Sequential fresh processes, 3 rounds, alternating before/after order; default search budgets; cache disabled for cold comparisons",
+  "cases": [
+    {
+      "name": "big",
+      "beforeMs": [
+        12568.854167000001,
+        12600.318126,
+        12736.145232
+      ],
+      "afterMs": [
+        12520.209783,
+        12542.087791999998,
+        12558.913118999999
+      ],
+      "beforeMedianMs": 12600.318126,
+      "afterMedianMs": 12542.087791999998,
+      "savedPercent": 0.46213383993731777,
+      "score": 50109,
+      "metrics": {
+        "widthToHeight": 1.75,
+        "crossings": 35196,
+        "crossedArrows": 999,
+        "overlaps": 335,
+        "tooClose": 1432,
+        "hugging": 505,
+        "through": 2051,
+        "bends": 1469,
+        "jogs": 35,
+        "diagonal": 0
+      },
+      "geometrySha256": "f56aadce1882a6c7fb8ca5717ffc464ef2dee899783cb0a4bf78489787464392"
+    },
+    {
+      "name": "large",
+      "beforeMs": [
+        46873.287431000004,
+        46023.853977,
+        45442.578656
+      ],
+      "afterMs": [
+        45763.259335999996,
+        45238.478760000005,
+        45817.391351000006
+      ],
+      "beforeMedianMs": 46023.853977,
+      "afterMedianMs": 45763.259335999996,
+      "savedPercent": 0.5662164692470846,
+      "score": 208636,
+      "metrics": {
+        "widthToHeight": 1.78,
+        "crossings": 149780,
+        "crossedArrows": 2000,
+        "overlaps": 1229,
+        "tooClose": 5449,
+        "hugging": 1419,
+        "through": 8255,
+        "bends": 3125,
+        "jogs": 56,
+        "diagonal": 0
+      },
+      "geometrySha256": "fd79b659b83eeafe8f71168482f129a68ea46eeeaa33e7035938fab1d184a5f1"
+    },
+    {
+      "name": "outer-big",
+      "beforeMs": [
+        16091.195197000001,
+        15713.750251000001,
+        15676.882131
+      ],
+      "afterMs": [
+        5002.602693999999,
+        4964.952132,
+        5003.632163
+      ],
+      "beforeMedianMs": 15713.750251000001,
+      "afterMedianMs": 5002.602693999999,
+      "savedPercent": 68.1641707797816,
+      "score": 52487,
+      "metrics": {
+        "widthToHeight": 1.75,
+        "crossings": 33750,
+        "crossedArrows": 970,
+        "overlaps": 841,
+        "tooClose": 1374,
+        "hugging": 351,
+        "through": 2555,
+        "bends": 1346,
+        "jogs": 27,
+        "diagonal": 0
+      },
+      "geometrySha256": "41f970429c16ecb6f73b1ead561fc53d3b3fe43d18c5bcbadacf7a4f25d870b4"
+    },
+    {
+      "name": "outer-large",
+      "beforeMs": [
+        66519.169936,
+        68278.056448,
+        66454.866916
+      ],
+      "afterMs": [
+        13650.711534,
+        13837.006105,
+        13631.953089999999
+      ],
+      "beforeMedianMs": 66519.169936,
+      "afterMedianMs": 13650.711534,
+      "savedPercent": 79.47852995289367,
+      "score": 234900,
+      "metrics": {
+        "widthToHeight": 1.78,
+        "crossings": 156554,
+        "crossedArrows": 1984,
+        "overlaps": 2596,
+        "tooClose": 6082,
+        "hugging": 1138,
+        "through": 10989,
+        "bends": 2871,
+        "jogs": 21,
+        "diagonal": 0
+      },
+      "geometrySha256": "3073811f320915f894cc086f3b385f36b29dfb3777a776eb81b2e0c52ee40b82"
+    }
+  ],
+  "trials": {
+    "compactPairTable": {
+      "decision": "rejected: slower",
+      "samples": [
+        {
+          "stage": "baseline",
+          "name": "cap-big",
+          "ms": 105016.506521,
+          "score": 412043,
+          "hash": "2f705d2f1fd0ef0e1eac04d8fdec2f0c6373a7af4a75c7fb47b3be771c58c41a"
+        },
+        {
+          "stage": "compact",
+          "name": "cap-big",
+          "ms": 122386.933527,
+          "score": 412043,
+          "hash": "2f705d2f1fd0ef0e1eac04d8fdec2f0c6373a7af4a75c7fb47b3be771c58c41a"
+        },
+        {
+          "stage": "baseline",
+          "name": "cap-large",
+          "ms": 232246.713678,
+          "score": 1095056,
+          "hash": "97c69cdfbab2c336d29172dc4db68093a02d534c4d9fee97afcfbcf84a196d5f"
+        },
+        {
+          "stage": "compact",
+          "name": "cap-large",
+          "ms": 279986.251292,
+          "score": 1095056,
+          "hash": "97c69cdfbab2c336d29172dc4db68093a02d534c4d9fee97afcfbcf84a196d5f"
+        }
+      ]
+    },
+    "incrementalScoring": {
+      "decision": "rejected: slower",
+      "samples": [
+        {
+          "stage": "baseline",
+          "name": "big",
+          "ms": 9022.287651999999,
+          "orderSha256": "80c9fc16a1daf4110e94c4a8154e6e9ef1c5678f2ee670f07b7de5b610443281"
+        },
+        {
+          "stage": "incremental",
+          "name": "big",
+          "ms": 13810.47558,
+          "orderSha256": "80c9fc16a1daf4110e94c4a8154e6e9ef1c5678f2ee670f07b7de5b610443281"
+        },
+        {
+          "stage": "baseline",
+          "name": "large",
+          "ms": 38113.315005,
+          "orderSha256": "91e9b301b92e9cf767a5411d711ad408dbf2a996d0bd6bdcf93458cf17e14635"
+        },
+        {
+          "stage": "incremental",
+          "name": "large",
+          "ms": 58325.875256,
+          "orderSha256": "91e9b301b92e9cf767a5411d711ad408dbf2a996d0bd6bdcf93458cf17e14635"
+        }
+      ]
+    },
+    "circleCoordinates": {
+      "decision": "rejected: below threshold and slower on large",
+      "samples": [
+        {
+          "stage": "sweep-only",
+          "name": "big",
+          "ms": 9019.48265,
+          "orderSha256": "80c9fc16a1daf4110e94c4a8154e6e9ef1c5678f2ee670f07b7de5b610443281"
+        },
+        {
+          "stage": "circle-only",
+          "name": "big",
+          "ms": 8940.002878000001,
+          "orderSha256": "80c9fc16a1daf4110e94c4a8154e6e9ef1c5678f2ee670f07b7de5b610443281"
+        },
+        {
+          "stage": "sweep-only",
+          "name": "large",
+          "ms": 38113.018984999995,
+          "orderSha256": "91e9b301b92e9cf767a5411d711ad408dbf2a996d0bd6bdcf93458cf17e14635"
+        },
+        {
+          "stage": "circle-only",
+          "name": "large",
+          "ms": 38562.898011000005,
+          "orderSha256": "91e9b301b92e9cf767a5411d711ad408dbf2a996d0bd6bdcf93458cf17e14635"
+        }
+      ]
+    },
+    "persistentCache": {
+      "decision": "retained: opt-in, cross-process hits; no first-run speedup claimed",
+      "samples": [
+        {
+          "name": "big",
+          "missMs": 12447.914895,
+          "hitMs": [
+            14.738254000000005,
+            14.755262999999992,
+            15.205526000000006
+          ],
+          "hitMedianMs": 14.755262999999992,
+          "score": 50109,
+          "geometrySha256": "f56aadce1882a6c7fb8ca5717ffc464ef2dee899783cb0a4bf78489787464392"
+        },
+        {
+          "name": "large",
+          "missMs": 45504.224501000004,
+          "hitMs": [
+            26.780345999999994,
+            26.490052999999996,
+            26.777375999999997
+          ],
+          "hitMedianMs": 26.777375999999997,
+          "score": 208636,
+          "geometrySha256": "fd79b659b83eeafe8f71168482f129a68ea46eeeaa33e7035938fab1d184a5f1"
+        }
+      ]
+    }
+  }
+}

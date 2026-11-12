@@ -6,6 +6,7 @@ import { describe, it } from 'vitest'
 import { GraphvizLayouter } from '../graphviz/GraphvizLayoter'
 import { GraphvizWasmAdapter } from '../graphviz/wasm/GraphvizWasmAdapter'
 import { orthoMetrics } from './metrics'
+import { PlacementCache } from './placement-cache'
 import { surroundLayout } from './surround-layout'
 
 function buildModel() {
@@ -102,6 +103,31 @@ const contains = (outer: DiagramNode, inner: DiagramNode) =>
   && inner.x + inner.width <= outer.x + outer.width && inner.y + inner.height <= outer.y + outer.height
 
 describe('surround placement', () => {
+  it('accepts an external placement cache and rejects geometry with incompatible counts', async ({ expect }) => {
+    const input = await layout('ranked')
+    if (!isElementView(input)) throw new Error('Expected an element view')
+    const storage = new PlacementCache()
+    let hits = 0
+    const cache = {
+      get: (key: string) => {
+        const result = storage.get(key)
+        if (result) hits++
+        return result
+      },
+      set: storage.set.bind(storage),
+    }
+    const options = { iterations: 100, seed: 398 }
+    const expected = surroundLayout(input, { ...options, cache: false })
+    const layouter = new GraphvizLayouter(new GraphvizWasmAdapter(), { ...options, cache })
+    const model = buildModel()
+    const params = { view: model.view('surround').$view, styles: model.$styles }
+    const first = await layouter.layout(params)
+    expect(first.diagram.routing).toBe('ortho')
+    expect((await layouter.layout(params)).diagram).toEqual(first.diagram)
+    expect(hits).toBe(1)
+    expect(surroundLayout(input, { ...options, cache: { get: () => ({ centers: [], polylines: [] }), set: () => {} } }))
+      .toEqual(expected)
+  })
   it('reuses searches without retaining stale view data or sharing mutable output', async ({ expect }) => {
     const input = await layout('ranked')
     if (!isElementView(input)) {

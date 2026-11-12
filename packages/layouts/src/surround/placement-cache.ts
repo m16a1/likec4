@@ -5,12 +5,18 @@ export interface SurroundPlacement {
   polylines: XY[][]
 }
 
+/** Storage of completed deterministic surround searches, keyed by all search inputs. */
+export interface SurroundPlacementCache {
+  get(key: string): SurroundPlacement | undefined
+  set(key: string, placement: SurroundPlacement): void
+}
+
 /**
  * Process-local LRU of completed searches. Only numeric geometry is retained; labels and other view
  * data are rebuilt from the current input. Serialized entries are bounded by their UTF-16 size and
  * decoded on retrieval, so callers cannot mutate a cached placement.
  */
-export class PlacementCache {
+export class PlacementCache implements SurroundPlacementCache {
   private readonly entries = new Map<string, string>()
   private bytes = 0
 

@@ -4,7 +4,7 @@ import { placeEdgeLabels } from '../graphviz/place-edge-label'
 import { type SurroundGraph, anneal, buildSlots, innerRingSize, random } from './annealer'
 import { capForExtent, compactAxis, compactedExtent } from './compact'
 import { circularOrder } from './order'
-import { PlacementCache } from './placement-cache'
+import { type SurroundPlacementCache, PlacementCache } from './placement-cache'
 import { gridRoute, routeScore } from './router'
 
 export interface SurroundLayoutOptions {
@@ -15,8 +15,8 @@ export interface SurroundLayoutOptions {
   readonly seed?: number
   /** Independent annealing runs sharing the iterations, the best one wins */
   readonly restarts?: number
-  /** Reuse completed searches within this process, defaults to true. */
-  readonly cache?: boolean
+  /** Reuse completed searches in memory by default, or provide persistent storage. */
+  readonly cache?: boolean | SurroundPlacementCache
 }
 
 /** Padding of the system box around its children; extra on top for the title */
@@ -34,6 +34,8 @@ const COMPACT_GAP = 90
 const SKETCH_T0 = 0.3
 /** Above this many arrows routing on the grid gets slow and no longer pays off */
 const MAX_ROUTED_ARROWS = 300
+/** Bump when changing search results or cached placement semantics. */
+const SEARCH_CACHE_VERSION = 1
 const placementCache = new PlacementCache()
 
 type XY = { x: number; y: number }
@@ -110,10 +112,14 @@ export function surroundLayout<V extends LayoutedElementView>(
   const seed = options.seed ?? 1
   const searchIterations = options.iterations ?? iterations
   const aspect = options.aspect ?? 16 / 9
+  const cache = typeof options.cache === 'object' ? options.cache : placementCache
   const cacheKey = options.cache === false
     ? null
-    : JSON.stringify([graph, aspect, searchIterations, restarts, seed, Boolean(compound)])
-  let placement = cacheKey === null ? undefined : placementCache.get(cacheKey)
+    : JSON.stringify([SEARCH_CACHE_VERSION, graph, aspect, searchIterations, restarts, seed, Boolean(compound)])
+  let placement = cacheKey === null ? undefined : cache.get(cacheKey)
+  if (placement && (placement.centers.length !== sizes.length || placement.polylines.length !== edges.length)) {
+    placement = undefined
+  }
   if (!placement) {
     // with a system box, start from the order of neighbours with fewest crossings on a sketch;
     // around a single hub every order is as good
@@ -144,7 +150,7 @@ export function surroundLayout<V extends LayoutedElementView>(
     }
     placement = { centers, polylines }
     if (cacheKey !== null) {
-      placementCache.set(cacheKey, placement)
+      cache.set(cacheKey, placement)
     }
   }
   const { centers, polylines } = placement

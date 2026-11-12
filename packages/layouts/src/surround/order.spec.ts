@@ -3,6 +3,25 @@ import { type SurroundGraph, random } from './annealer'
 import { circularOrder } from './order'
 
 describe('circularOrder', () => {
+  it('preserves interleaving counts with shared endpoints and repeated outer arrows', ({ expect }) => {
+    for (let seed = 1; seed <= 30; seed++) {
+      const rnd = random(seed)
+      const nodes = 10 + seed
+      const graph: SurroundGraph = {
+        sizes: Array.from({ length: nodes }, () => [120, 90]),
+        edges: Array.from({ length: 200 }, () => {
+          const a = Math.floor(rnd() * nodes)
+          return [a, (a + 1 + Math.floor(rnd() * (nodes - 1))) % nodes]
+        }),
+        inner: [],
+        outer: Array.from({ length: nodes }, (_, i) => i),
+      }
+      const optimized = random(seed), reference = random(seed)
+      expect(circularOrder(graph, optimized, 200), `seed ${seed}`)
+        .toEqual(circularOrder(graph, reference, 200, false))
+      expect(optimized()).toBe(reference())
+    }
+  })
   it('preserves uncached search results across dense sketches', ({ expect }) => {
     for (let seed = 1; seed <= 40; seed++) {
       const rnd = random(seed)
