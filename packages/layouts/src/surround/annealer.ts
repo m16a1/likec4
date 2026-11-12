@@ -73,6 +73,16 @@ const W_BEND = 0.03
 const W_LEN = 1e-4
 const W_JOG = 1
 const W_SIDE = 0.5
+// Cache penalty categories, keeping each original addition in its original order.
+// Summing cached totals instead can change floating-point rounding and the annealing path.
+const PAIR_WEIGHTS = [0, W_CROSS, W_OVERLAP, W_CLOSE] as const
+const BOX_WEIGHTS = [0, W_THROUGH, W_HUG, W_THROUGH + W_HUG] as const
+/** Each route shape has at most three segments; each cached category occupies two bits. */
+const MAX_SEGMENTS = 3
+const ROW_MASK = (1 << (MAX_SEGMENTS * 2)) - 1
+const COLUMN_MASK = 3 | (3 << (MAX_SEGMENTS * 2)) | (3 << (MAX_SEGMENTS * 4))
+/** Bound score-cache memory for large views. Uncached views use the same cost function. */
+const MAX_CACHED_INTERACTIONS = 250_000
 
 type RouteKind = 'HV' | 'VH' | 'HVH' | 'VHV'
 const ROUTES: ReadonlyArray<readonly [RouteKind, number]> = [
@@ -198,7 +208,8 @@ export function innerRingSize(graph: SurroundGraph, slots: SurroundSlots): numbe
   }).length
 }
 
-class SurroundState {
+/** Mutable search state; exported within this module for scoring regression tests. */
+export class SurroundState {
   readonly centers: XY[]
   readonly slotOf: Slot[]
   readonly innerOcc: Array<number | undefined>
@@ -210,9 +221,19 @@ class SurroundState {
   readonly routes: number[]
   readonly polylines: XY[][]
   readonly segments: Segment[][]
+  /** Route bounds expanded by MIN_GAP, for rejecting distant segment pairs */
+  readonly routeBounds: Array<[number, number, number, number]>
   /** Shrunk box per node: x0, y0, x1, y1 */
   readonly boxes: Array<[number, number, number, number]>
   private readonly inK: Uint8Array
+  private readonly routeVersions: Uint32Array
+  private readonly boxVersions: Uint32Array
+  private readonly pairCache: InteractionCache | null
+  private readonly boxCache: InteractionCache | null
+  private readonly pairCodes: Uint32Array
+  private readonly boxCodes: Uint32Array
+  /** Interacting routes per segment, always in the original edge order. */
+  private readonly activePairs: number[][] = Array.from({ length: MAX_SEGMENTS }, () => [])
 
   constructor(
     readonly graph: SurroundGraph,
@@ -221,6 +242,14 @@ class SurroundState {
     outerOrder?: ReadonlyArray<number>,
   ) {
     const n = graph.sizes.length
+    const m = graph.edges.length
+    this.routeVersions = new Uint32Array(m)
+    this.boxVersions = new Uint32Array(n)
+    const cache = m * (m + n) <= MAX_CACHED_INTERACTIONS
+    this.pairCache = cache ? new InteractionCache(m, m) : null
+    this.boxCache = cache ? new InteractionCache(m, n) : null
+    this.pairCodes = new Uint32Array(m)
+    this.boxCodes = new Uint32Array(n)
     this.centers = Array.from({ length: n }, (): XY => [0, 0])
     this.boxes = Array.from({ length: n }, (): [number, number, number, number] => [0, 0, 0, 0])
     this.slotOf = Array.from({ length: n }, (): Slot => ({ outer: false, index: 0 }))
@@ -250,6 +279,7 @@ class SurroundState {
     this.routes = graph.edges.map(() => Math.floor(rnd() * ROUTES.length))
     this.polylines = graph.edges.map(() => [])
     this.segments = graph.edges.map(() => [])
+    this.routeBounds = graph.edges.map(() => [0, 0, 0, 0])
     this.inK = new Uint8Array(graph.edges.length)
     this.refresh(graph.edges.map((_, e) => e))
   }
@@ -305,6 +335,7 @@ class SurroundState {
   }
 
   place(node: number, slot: Slot) {
+    this.boxVersions[node]!++
     this.slotOf[node] = slot
     const [x, y] = slot.outer ? this.slots.outer[slot.index]! : this.slots.inner[slot.index]!
     if (slot.outer) {
@@ -332,8 +363,17 @@ class SurroundState {
   /** Recomputes polylines and segments of the given arrows */
   refresh(edges: Iterable<number>) {
     for (const e of edges) {
+      this.routeVersions[e]!++
       const polyline = this.polyline(e)
       this.polylines[e] = polyline
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+      for (const [x, y] of polyline) {
+        x0 = Math.min(x0, x)
+        y0 = Math.min(y0, y)
+        x1 = Math.max(x1, x)
+        y1 = Math.max(y1, y)
+      }
+      this.routeBounds[e] = [x0 - MIN_GAP, y0 - MIN_GAP, x1 + MIN_GAP, y1 + MIN_GAP]
       const segments: Segment[] = []
       for (let i = 0; i + 1 < polyline.length; i++) {
         const [x1, y1] = polyline[i]!, [x2, y2] = polyline[i + 1]!
@@ -410,21 +450,28 @@ class SurroundState {
     return false
   }
 
-  /** Segment runs through a box, or along one of its sides closer than MIN_GAP */
-  private boxPenalty(s: Segment, node: number): number {
-    const [x0, y0, x1, y1] = this.boxes[node]!
-    const [a0, a1, s0, s1] = s.horiz ? [y0, y1, x0, x1] : [x0, x1, y0, y1]
-    let cost = 0
+  /** Flags for passing through a box or hugging its side. */
+  private boxFlags(s: Segment, node: number): number {
+    const box = this.boxes[node]!
+    const a0 = box[s.horiz ? 1 : 0], a1 = box[s.horiz ? 3 : 2]
+    const s0 = box[s.horiz ? 0 : 1], s1 = box[s.horiz ? 2 : 3]
+    if (
+      s.c <= a0 - SHRINK - MIN_GAP || s.c >= a1 + SHRINK + MIN_GAP
+      || s.hi <= s0 - SHRINK || s.lo >= s1 + SHRINK
+    ) {
+      return 0
+    }
+    let flags = 0
     if (s.c > a0 && s.c < a1 && s.lo < s1 && s.hi > s0) {
-      cost += W_THROUGH
+      flags |= 1
     }
     // hugging is measured against the unshrunk box
     const r0 = a0 - SHRINK, r1 = a1 + SHRINK
     const near = (s.c > r0 - MIN_GAP && s.c <= r0 + SHRINK) || (s.c >= r1 - SHRINK && s.c < r1 + MIN_GAP)
     if (near && Math.min(s.hi, s1 + SHRINK) - Math.max(s.lo, s0 - SHRINK) > MIN_SHARED) {
-      cost += W_HUG
+      flags |= 2
     }
-    return cost
+    return flags
   }
 
   /** Cost of arrows K against everything, plus all other arrows against the moved boxes */
@@ -446,37 +493,54 @@ class SurroundState {
         }
       }
       const [ks, kt] = edges[k]!
-      for (const s of this.segments[k]!) {
-        for (let e = 0; e < edges.length; e++) {
-          if (e === k) {
+      for (const active of this.activePairs) {
+        active.length = 0
+      }
+      for (let e = 0; e < edges.length; e++) {
+        if (e !== k) {
+          const code = this.pairCode(k, e)
+          if (code === 0) {
             continue
           }
-          // pairs within K are visited from both sides
+          this.pairCodes[e] = code
+          const mask = k < e ? ROW_MASK : COLUMN_MASK
+          const shift = k < e ? MAX_SEGMENTS * 2 : 2
+          for (let i = 0; i < this.segments[k]!.length; i++) {
+            if (code & (mask << (i * shift))) {
+              this.activePairs[i]!.push(e)
+            }
+          }
+        }
+      }
+      for (let node = 0; node < this.boxes.length; node++) {
+        if (node !== ks && node !== kt) {
+          this.boxCodes[node] = this.edgeBoxCode(k, node)
+        }
+      }
+      for (let i = 0; i < this.segments[k]!.length; i++) {
+        for (const e of this.activePairs[i]!) {
+          const code = this.pairCodes[e]!
+          // Canonical pairs store a 3x3 matrix of two-bit segment penalties.
+          // Read its row or column to retain the original k-segment/e-segment order.
+          const shift = i * (k < e ? MAX_SEGMENTS * 2 : 2)
+          const stride = k < e ? 2 : MAX_SEGMENTS * 2
           const w = inK[e] ? 0.5 : 1
-          for (const t of this.segments[e]!) {
-            if (s.horiz !== t.horiz) {
-              if (t.c > s.lo && t.c < s.hi && s.c > t.lo && s.c < t.hi) {
-                const [px, py] = s.horiz ? [t.c, s.c] : [s.c, t.c]
-                if (!this.hidden(px, py, k) && !this.hidden(px, py, e)) {
-                  total += W_CROSS * w
-                }
-              }
-              continue
-            }
-            if (Math.min(s.hi, t.hi) - Math.max(s.lo, t.lo) <= MIN_SHARED) {
-              continue
-            }
-            const gap = Math.abs(s.c - t.c)
-            if (gap < OVERLAP_GAP) {
-              total += W_OVERLAP * w
-            } else if (gap < MIN_GAP) {
-              total += W_CLOSE * w
-            }
+          const first = (code >>> shift) & 3
+          const second = (code >>> (shift + stride)) & 3
+          const third = (code >>> (shift + 2 * stride)) & 3
+          if (first !== 0) {
+            total += PAIR_WEIGHTS[first]! * w
+          }
+          if (second !== 0) {
+            total += PAIR_WEIGHTS[second]! * w
+          }
+          if (third !== 0) {
+            total += PAIR_WEIGHTS[third]! * w
           }
         }
         for (let node = 0; node < this.boxes.length; node++) {
           if (node !== ks && node !== kt) {
-            total += this.boxPenalty(s, node)
+            total += BOX_WEIGHTS[(this.boxCodes[node]! >>> (i * 2)) & 3]!
           }
         }
       }
@@ -487,10 +551,15 @@ class SurroundState {
           continue
         }
         const [es, et] = edges[e]!
-        for (const s of this.segments[e]!) {
+        for (const node of moved) {
+          if (node !== es && node !== et) {
+            this.boxCodes[node] = this.edgeBoxCode(e, node)
+          }
+        }
+        for (let i = 0; i < this.segments[e]!.length; i++) {
           for (const node of moved) {
             if (node !== es && node !== et) {
-              total += this.boxPenalty(s, node)
+              total += BOX_WEIGHTS[(this.boxCodes[node]! >>> (i * 2)) & 3]!
             }
           }
         }
@@ -500,6 +569,66 @@ class SurroundState {
       inK[k] = 0
     }
     return total
+  }
+
+  private pairCode(a: number, b: number): number {
+    // A shared entry for both directions; endpoint boxes move only with incident routes.
+    const k = Math.min(a, b), e = Math.max(a, b)
+    const kv = this.routeVersions[k]!, ev = this.routeVersions[e]!
+    const cached = this.pairCache?.get(k, e, kv, ev)
+    if (cached !== undefined) {
+      return cached
+    }
+    let code = 0
+    const bounds = this.routeBounds[e]!
+    for (let i = 0; i < this.segments[k]!.length; i++) {
+      const s = this.segments[k]![i]!
+      if (
+        s.horiz
+          ? s.c < bounds[1] || s.c > bounds[3] || s.hi < bounds[0] || s.lo > bounds[2]
+          : s.c < bounds[0] || s.c > bounds[2] || s.hi < bounds[1] || s.lo > bounds[3]
+      ) {
+        continue
+      }
+      for (let j = 0; j < this.segments[e]!.length; j++) {
+        const t = this.segments[e]![j]!
+        const shift = (i * MAX_SEGMENTS + j) * 2
+        if (s.horiz !== t.horiz) {
+          if (t.c > s.lo && t.c < s.hi && s.c > t.lo && s.c < t.hi) {
+            const px = s.horiz ? t.c : s.c, py = s.horiz ? s.c : t.c
+            if (!this.hidden(px, py, k) && !this.hidden(px, py, e)) {
+              code |= 1 << shift
+            }
+          }
+          continue
+        }
+        if (Math.min(s.hi, t.hi) - Math.max(s.lo, t.lo) <= MIN_SHARED) {
+          continue
+        }
+        const gap = Math.abs(s.c - t.c)
+        if (gap < OVERLAP_GAP) {
+          code |= 2 << shift
+        } else if (gap < MIN_GAP) {
+          code |= 3 << shift
+        }
+      }
+    }
+    this.pairCache?.set(k, e, kv, ev, code)
+    return code
+  }
+
+  private edgeBoxCode(e: number, node: number): number {
+    const ev = this.routeVersions[e]!, bv = this.boxVersions[node]!
+    const cached = this.boxCache?.get(e, node, ev, bv)
+    if (cached !== undefined) {
+      return cached
+    }
+    let code = 0
+    for (let i = 0; i < this.segments[e]!.length; i++) {
+      code |= this.boxFlags(this.segments[e]![i]!, node) << (i * 2)
+    }
+    this.boxCache?.set(e, node, ev, bv, code)
+    return code
   }
 
   /** Deviation of neighbours per side from each side's share of the box perimeter */
@@ -526,6 +655,32 @@ class SurroundState {
     const n = this.graph.outer.length, perimeter = 2 * (w + h)
     return Math.abs(top - n * w / perimeter) + Math.abs(bottom - n * w / perimeter)
       + Math.abs(left - n * h / perimeter) + Math.abs(right - n * h / perimeter)
+  }
+}
+
+/** Lazily invalidated scores of two independently changing routes or boxes. */
+class InteractionCache {
+  private readonly values: Uint32Array
+  private readonly firstVersions: Uint32Array
+  private readonly secondVersions: Uint32Array
+
+  constructor(rows: number, private readonly columns: number) {
+    const size = rows * columns
+    this.values = new Uint32Array(size)
+    this.firstVersions = new Uint32Array(size)
+    this.secondVersions = new Uint32Array(size)
+  }
+
+  get(a: number, b: number, av: number, bv: number): number | undefined {
+    const i = a * this.columns + b
+    return this.firstVersions[i] === av && this.secondVersions[i] === bv ? this.values[i] : undefined
+  }
+
+  set(a: number, b: number, av: number, bv: number, value: number) {
+    const i = a * this.columns + b
+    this.values[i] = value
+    this.firstVersions[i] = av
+    this.secondVersions[i] = bv
   }
 }
 
@@ -583,8 +738,12 @@ export function anneal(graph: SurroundGraph, options: AnnealOptions): AnnealResu
         }
         const e = randInt(edges.length)
         const old = st.routes[e]!
+        const route = randInt(ROUTES.length)
+        if (route === old) {
+          break
+        }
         const before = st.cost([e])
-        st.routes[e] = randInt(ROUTES.length)
+        st.routes[e] = route
         st.refresh([e])
         if (!accept(st.cost([e]) - before, T)) {
           st.routes[e] = old

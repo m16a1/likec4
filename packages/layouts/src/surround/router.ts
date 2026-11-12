@@ -37,24 +37,32 @@ const W_BEND = 0.03
 /** Per grid step; a crossing is worth a detour of about 65 steps */
 const W_STEP = 0.015
 
-/** Directions: right, down, left, up */
-const DX = [1, 0, -1, 0] as const
-const DY = [0, 1, 0, -1] as const
-
 /** Binary min-heap of integer values by numeric keys */
 class Heap {
-  private readonly keys: number[] = []
-  private readonly values: number[] = []
+  private keys = new Float64Array(1024)
+  private values = new Int32Array(1024)
+  private count = 0
+  /** Key of the most recently popped entry. */
+  key = 0
 
   get size(): number {
-    return this.keys.length
+    return this.count
+  }
+
+  clear() {
+    this.count = 0
   }
 
   push(key: number, value: number) {
+    let i = this.count++
+    if (i === this.keys.length) {
+      const keys = new Float64Array(i * 2), values = new Int32Array(i * 2)
+      keys.set(this.keys)
+      values.set(this.values)
+      this.keys = keys
+      this.values = values
+    }
     const { keys, values } = this
-    let i = keys.length
-    keys.push(key)
-    values.push(value)
     while (i > 0) {
       const parent = (i - 1) >> 1
       if (keys[parent]! <= key) {
@@ -68,12 +76,13 @@ class Heap {
     values[i] = value
   }
 
-  /** Removes the entry with the smallest key, returns its key and value */
-  pop(): readonly [number, number] {
+  /** Removes the smallest entry, preserving the original tie order. */
+  pop(): number {
     const { keys, values } = this
-    const top = [keys[0]!, values[0]!] as const
-    const lastKey = keys.pop()!, lastValue = values.pop()!
-    const n = keys.length
+    this.key = keys[0]!
+    const top = values[0]!
+    const n = --this.count
+    const lastKey = keys[n]!, lastValue = values[n]!
     if (n > 0) {
       let i = 0
       while (true) {
@@ -173,6 +182,25 @@ export function gridRoute(
       : gx(v) >= x0 + CORNER && gx(v) <= x1 - CORNER
   }
 
+  // Geometry is fixed throughout rip-up and reroute. Precompute legal grid steps,
+  // including the corner clearance at box boundaries, once for all path searches.
+  const offsets = [1, NX, -1, -NX]
+  const allowed = new Uint8Array(N)
+  for (let v = 0; v < N; v++) {
+    const i = v % NX, j = (v - i) / NX
+    for (let d = 0; d < 4; d++) {
+      if (d === 0 && i === NX - 1 || d === 1 && j === NY - 1 || d === 2 && i === 0 || d === 3 && j === 0) {
+        continue
+      }
+      const w = v + offsets[d]!
+      const a = inside[v]!, b = inside[w]!
+      if (a >= 0 && b < 0 && !port(v, a, d) || a < 0 && b >= 0 && !port(w, b, d)) {
+        continue
+      }
+      allowed[v]! |= 1 << d
+    }
+  }
+
   // usage by routed arrows: horizontal edge v→v+1 at edgeH[v], vertical edge v→v+NX at edgeV[v],
   // arrows passing straight through a node, and arrows bending there
   const edgeH = new Int16Array(N), edgeV = new Int16Array(N)
@@ -211,6 +239,13 @@ export function gridRoute(
   const dist = new Float64Array(N * 4).fill(Infinity)
   const prev = new Int32Array(N * 4)
   const touched: number[] = []
+  // Reuse storage across searches, keeping the same binary-heap ordering on ties.
+  const heap = new Heap()
+
+  // All four direction states at a grid node share the same estimate. Reuse it across
+  // heap entries and reroutes to the same target instead of repeating coordinate math.
+  const estimates = new Float64Array(N)
+  const estimatedFor = new Int32Array(N).fill(-1)
 
   /** Cheapest path of arrow `e` against the arrows routed so far, as grid nodes */
   const route = (e: number): number[] | null => {
@@ -219,12 +254,18 @@ export function gridRoute(
       dist[state] = Infinity
     }
     touched.length = 0
-    const heap = new Heap()
+    heap.clear()
     const [tx0, ty0, tx1, ty1] = boxes[t]!
     // admissible estimate: the remaining steps to the target box
     const estimate = (v: number) => {
+      if (estimatedFor[v] === t) {
+        return estimates[v]!
+      }
       const dx = Math.max(0, tx0 - gx(v), gx(v) - tx1), dy = Math.max(0, ty0 - gy(v), gy(v) - ty1)
-      return (dx + dy) / STEP * W_STEP
+      const value = (dx + dy) / STEP * W_STEP
+      estimatedFor[v] = t
+      estimates[v] = value
+      return value
     }
     // every grid node inside the source box is a start
     const [sx0, sy0, sx1, sy1] = boxes[s]!
@@ -246,7 +287,7 @@ export function gridRoute(
       }
     }
     while (heap.size > 0) {
-      const [key, state] = heap.pop()
+      const state = heap.pop(), key = heap.key
       const v = state >> 2, dirIn = state & 3
       const g = dist[state]!
       if (key - estimate(v) > g + 1e-9) {
@@ -265,26 +306,21 @@ export function gridRoute(
         }
         return path.slice(k)
       }
-      const vi = v % NX, vj = (v - vi) / NX
       const ownV = inside[v] === s || inside[v] === t
       const start = prev[state] === -1
       for (let d = 0; d < 4; d++) {
         if (!start && d === ((dirIn + 2) & 3)) {
           continue
         }
-        const wi = vi + DX[d]!, wj = vj + DY[d]!
-        if (wi < 0 || wj < 0 || wi >= NX || wj >= NY) {
+        if (!(allowed[v]! & (1 << d))) {
           continue
         }
-        const w = wj * NX + wi
+        const w = v + offsets[d]!
         const box = inside[w]!
         if (box >= 0 && box !== s && box !== t) {
           continue
         }
         const ownW = box === s || box === t
-        if (ownV !== ownW && !port(ownV ? v : w, ownV ? inside[v]! : box, d)) {
-          continue
-        }
         let cost = 0
         if (!ownV || !ownW) {
           cost += W_STEP + W_OVERLAP * (d % 2 === 0 ? edgeH[Math.min(v, w)]! : edgeV[Math.min(v, w)]!)
@@ -370,6 +406,10 @@ export function gridRoute(
     const current = score()
     if (current < best.score) {
       best = { score: current, polylines: polylines() }
+    }
+    // Later rounds cannot improve a zero penalty, and ties keep this same drawing.
+    if (best.score === 0) {
+      break
     }
   }
   return best.polylines
