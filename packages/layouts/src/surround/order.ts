@@ -1,5 +1,9 @@
 import type { SurroundGraph } from './annealer'
 
+/** Each optional scoring table occupies at most 32 MiB. */
+const MAX_ORIENTATIONS = 4_194_304
+const MAX_PREPARED_PAIRS = 2_097_152
+
 /**
  * Cyclic order of the outer nodes around the system box with few crossings, found on a sketch:
  * outer nodes on a circle in that order, inner nodes at the barycentre of their neighbours (Tutte),
@@ -7,7 +11,13 @@ import type { SurroundGraph } from './annealer'
  * For a graph that can be drawn without crossings with the outer nodes outside the box, the best order has
  * no crossings on the sketch either.
  */
-export function circularOrder(graph: SurroundGraph, rnd: () => number, evaluations?: number): number[] {
+export function circularOrder(
+  graph: SurroundGraph,
+  rnd: () => number,
+  evaluations?: number,
+  /** Keep the original scorer when false, for exact regression comparisons. */
+  optimized = true,
+): number[] {
   const { inner, outer, edges } = graph
   const m = outer.length
   const order = [...outer]
@@ -62,33 +72,103 @@ export function circularOrder(graph: SurroundGraph, rnd: () => number, evaluatio
   const orient = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number) =>
     (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
 
-  const crossings = () => {
-    let total = 0
+  // Reuse each edge/vertex orientation across all pairs containing that vertex.
+  // Bound the projection and topology tables to 32 MiB each.
+  const nodes = graph.sizes.length
+  const orientations = optimized && nodes < 2 * sketchEdges.length && nodes * sketchEdges.length <= MAX_ORIENTATIONS
+    ? new Float64Array(nodes * sketchEdges.length)
+    : null
+  const pairCount = sketchEdges.length * (sketchEdges.length - 1) / 2
+  const pairLookups = orientations && pairCount <= MAX_PREPARED_PAIRS ? new Uint32Array(pairCount * 4) : null
+  let lookupCount = 0
+  if (pairLookups) {
     for (let i = 0; i < sketchEdges.length; i++) {
       const [a, b] = sketchEdges[i]!
       for (let j = i + 1; j < sketchEdges.length; j++) {
         const [c, d] = sketchEdges[j]!
-        if (a === c || a === d || b === c || b === d) {
+        if (a !== c && a !== d && b !== c && b !== d) {
+          pairLookups[lookupCount++] = i * nodes + c
+          pairLookups[lookupCount++] = i * nodes + d
+          pairLookups[lookupCount++] = j * nodes + a
+          pairLookups[lookupCount++] = j * nodes + b
+        }
+      }
+    }
+  }
+
+  const crossings = () => {
+    if (orientations) {
+      for (let i = 0; i < sketchEdges.length; i++) {
+        const [a, b] = sketchEdges[i]!
+        const ax = px[a]!, ay = py[a]!, dx = px[b]! - ax, dy = py[b]! - ay
+        const offset = i * nodes
+        for (let c = 0; c < nodes; c++) {
+          orientations[offset + c] = dx * (py[c]! - ay) - dy * (px[c]! - ax)
+        }
+      }
+    }
+    let total = 0
+    if (pairLookups && orientations) {
+      for (let k = 0; k < lookupCount; k += 4) {
+        const d1 = orientations[pairLookups[k]!]!, d2 = orientations[pairLookups[k + 1]!]!
+        const eps = 1e-9
+        if (d1 * d2 > eps) {
           continue
         }
-        const d1 = orient(px[a]!, py[a]!, px[b]!, py[b]!, px[c]!, py[c]!)
-        const d2 = orient(px[a]!, py[a]!, px[b]!, py[b]!, px[d]!, py[d]!)
-        const d3 = orient(px[c]!, py[c]!, px[d]!, py[d]!, px[a]!, py[a]!)
-        const d4 = orient(px[c]!, py[c]!, px[d]!, py[d]!, px[b]!, py[b]!)
-        // touching counts too: inner nodes with the same barycentre would otherwise hide crossings
-        const eps = 1e-9
-        if (d1 * d2 > eps || d3 * d4 > eps) {
+        const d3 = orientations[pairLookups[k + 2]!]!, d4 = orientations[pairLookups[k + 3]!]!
+        if (d3 * d4 > eps) {
           continue
         }
         const collinear = Math.abs(d1) < eps && Math.abs(d2) < eps
+        if (!collinear) {
+          total++
+          continue
+        }
+        const a = pairLookups[k + 2]! % nodes, b = pairLookups[k + 3]! % nodes
+        const c = pairLookups[k]! % nodes, d = pairLookups[k + 1]! % nodes
         if (
-          !collinear
-          || Math.max(px[a]!, px[b]!) >= Math.min(px[c]!, px[d]!) - eps
-            && Math.max(px[c]!, px[d]!) >= Math.min(px[a]!, px[b]!) - eps
-            && Math.max(py[a]!, py[b]!) >= Math.min(py[c]!, py[d]!) - eps
-            && Math.max(py[c]!, py[d]!) >= Math.min(py[a]!, py[b]!) - eps
+          Math.max(px[a]!, px[b]!) >= Math.min(px[c]!, px[d]!) - eps
+          && Math.max(px[c]!, px[d]!) >= Math.min(px[a]!, px[b]!) - eps
+          && Math.max(py[a]!, py[b]!) >= Math.min(py[c]!, py[d]!) - eps
+          && Math.max(py[c]!, py[d]!) >= Math.min(py[a]!, py[b]!) - eps
         ) {
           total++
+        }
+      }
+    } else {
+      for (let i = 0; i < sketchEdges.length; i++) {
+        const [a, b] = sketchEdges[i]!
+        for (let j = i + 1; j < sketchEdges.length; j++) {
+          const [c, d] = sketchEdges[j]!
+          if (a === c || a === d || b === c || b === d) {
+            continue
+          }
+          const d1 = orientations
+            ? orientations[i * nodes + c]!
+            : orient(px[a]!, py[a]!, px[b]!, py[b]!, px[c]!, py[c]!)
+          const d2 = orientations
+            ? orientations[i * nodes + d]!
+            : orient(px[a]!, py[a]!, px[b]!, py[b]!, px[d]!, py[d]!)
+          const d3 = orientations
+            ? orientations[j * nodes + a]!
+            : orient(px[c]!, py[c]!, px[d]!, py[d]!, px[a]!, py[a]!)
+          const d4 = orientations
+            ? orientations[j * nodes + b]!
+            : orient(px[c]!, py[c]!, px[d]!, py[d]!, px[b]!, py[b]!)
+          const eps = 1e-9
+          if (d1 * d2 > eps || d3 * d4 > eps) {
+            continue
+          }
+          const collinear = Math.abs(d1) < eps && Math.abs(d2) < eps
+          if (
+            !collinear
+            || Math.max(px[a]!, px[b]!) >= Math.min(px[c]!, px[d]!) - eps
+              && Math.max(px[c]!, px[d]!) >= Math.min(px[a]!, px[b]!) - eps
+              && Math.max(py[a]!, py[b]!) >= Math.min(py[c]!, py[d]!) - eps
+              && Math.max(py[c]!, py[d]!) >= Math.min(py[a]!, py[b]!) - eps
+          ) {
+            total++
+          }
         }
       }
     }
