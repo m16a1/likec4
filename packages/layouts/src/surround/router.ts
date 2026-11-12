@@ -1,5 +1,6 @@
 import type { Point } from '@likec4/core/geometry'
 import { orthoMetrics } from './metrics'
+import { RouteCache } from './route-cache'
 
 /**
  * Orthogonal routing of arrows between placed boxes on a uniform grid.
@@ -17,6 +18,8 @@ export interface GridRouteOptions {
   /** Rip-up and reroute rounds */
   readonly rounds?: number
   readonly seed?: number
+  /** Reuse searches whose congestion dependencies are unchanged, defaults to true. */
+  readonly reuseSearches?: boolean
 }
 
 /** Distance between grid lines */
@@ -205,6 +208,7 @@ export function gridRoute(
   // arrows passing straight through a node, and arrows bending there
   const edgeH = new Int16Array(N), edgeV = new Int16Array(N)
   const passH = new Int16Array(N), passV = new Int16Array(N), bend = new Int16Array(N)
+  let searchCache: RouteCache | null = null
 
   /** Adds (+1) or removes (-1) a routed path from the usage counters */
   const use = (path: ReadonlyArray<number>, s: number, t: number, sign: 1 | -1) => {
@@ -249,6 +253,11 @@ export function gridRoute(
 
   /** Cheapest path of arrow `e` against the arrows routed so far, as grid nodes */
   const route = (e: number): number[] | null => {
+    const cached = searchCache?.get(e)
+    if (cached !== undefined) {
+      return cached
+    }
+    let recording = searchCache?.begin(e) ?? false
     const [s, t] = edges[e]!
     for (const state of touched) {
       dist[state] = Infinity
@@ -304,7 +313,14 @@ export function gridRoute(
         while (k + 1 < path.length && inside[path[k + 1]!] === s) {
           k++
         }
-        return path.slice(k)
+        const result = path.slice(k)
+        if (recording) {
+          searchCache?.set(e, result)
+        }
+        return result
+      }
+      if (recording && searchCache) {
+        recording = searchCache.observe(v)
       }
       const ownV = inside[v] === s || inside[v] === t
       const start = prev[state] === -1
@@ -386,6 +402,9 @@ export function gridRoute(
   let best: { score: number; polylines: XY[][] } = { score: Infinity, polylines: [] }
   for (let round = 0; round <= rounds; round++) {
     if (round > 0) {
+      if (!searchCache && options.reuseSearches !== false) {
+        searchCache = new RouteCache(edges.length, NX, { edgeH, edgeV, passH, passV, bend })
+      }
       for (let i = order.length - 1; i > 0; i--) {
         const j = Math.floor(rnd() * (i + 1))
         ;[order[i], order[j]] = [order[j]!, order[i]!]

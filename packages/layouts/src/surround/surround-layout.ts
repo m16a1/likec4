@@ -4,6 +4,7 @@ import { placeEdgeLabels } from '../graphviz/place-edge-label'
 import { type SurroundGraph, anneal, buildSlots, innerRingSize, random } from './annealer'
 import { capForExtent, compactAxis, compactedExtent } from './compact'
 import { circularOrder } from './order'
+import { PlacementCache } from './placement-cache'
 import { gridRoute, routeScore } from './router'
 
 export interface SurroundLayoutOptions {
@@ -14,6 +15,8 @@ export interface SurroundLayoutOptions {
   readonly seed?: number
   /** Independent annealing runs sharing the iterations, the best one wins */
   readonly restarts?: number
+  /** Reuse completed searches within this process, defaults to true. */
+  readonly cache?: boolean
 }
 
 /** Padding of the system box around its children; extra on top for the title */
@@ -31,6 +34,7 @@ const COMPACT_GAP = 90
 const SKETCH_T0 = 0.3
 /** Above this many arrows routing on the grid gets slow and no longer pays off */
 const MAX_ROUTED_ARROWS = 300
+const placementCache = new PlacementCache()
 
 type XY = { x: number; y: number }
 
@@ -104,33 +108,46 @@ export function surroundLayout<V extends LayoutedElementView>(
   const iterations = Math.round(Math.min(120_000, Math.max(20_000, Math.min(edges.length * 1_000, 6e6 / edges.length))))
   const restarts = options.restarts ?? 1
   const seed = options.seed ?? 1
-  // with a system box, start from the order of neighbours with fewest crossings on a sketch;
-  // around a single hub every order is as good
-  const outerOrder = compound ? circularOrder(graph, random(seed)) : undefined
-  let best = null as ReturnType<typeof anneal> | null
-  for (let r = 0; r < restarts; r++) {
-    const result = anneal(graph, {
-      iterations: Math.round((options.iterations ?? iterations) / restarts),
-      seed: seed + r,
-      aspect: options.aspect ?? 16 / 9,
-      spare: SPARE,
-      outerOrder,
-      t0: outerOrder ? SKETCH_T0 : undefined,
-    })
-    if (!best || result.cost < best.cost) {
-      best = result
+  const searchIterations = options.iterations ?? iterations
+  const aspect = options.aspect ?? 16 / 9
+  const cacheKey = options.cache === false
+    ? null
+    : JSON.stringify([graph, aspect, searchIterations, restarts, seed, Boolean(compound)])
+  let placement = cacheKey === null ? undefined : placementCache.get(cacheKey)
+  if (!placement) {
+    // with a system box, start from the order of neighbours with fewest crossings on a sketch;
+    // around a single hub every order is as good
+    const outerOrder = compound ? circularOrder(graph, random(seed)) : undefined
+    let best = null as ReturnType<typeof anneal> | null
+    for (let r = 0; r < restarts; r++) {
+      const result = anneal(graph, {
+        iterations: Math.round(searchIterations / restarts),
+        seed: seed + r,
+        aspect,
+        spare: SPARE,
+        outerOrder,
+        t0: outerOrder ? SKETCH_T0 : undefined,
+      })
+      if (!best || result.cost < best.cost) {
+        best = result
+      }
+    }
+    const { centers } = best!
+    // annealing places the boxes, arrows are then routed freely around them, unless the routes
+    // found by annealing are better
+    let polylines = best!.polylines
+    if (edges.length <= MAX_ROUTED_ARROWS) {
+      const routed = gridRoute(sizes, centers, edges, { seed })
+      if (routeScore(sizes, centers, edges, routed) < routeScore(sizes, centers, edges, polylines)) {
+        polylines = routed
+      }
+    }
+    placement = { centers, polylines }
+    if (cacheKey !== null) {
+      placementCache.set(cacheKey, placement)
     }
   }
-  const { centers } = best!
-  // annealing places the boxes, arrows are then routed freely around them, unless the routes
-  // found by annealing are better
-  let polylines = best!.polylines
-  if (edges.length <= MAX_ROUTED_ARROWS) {
-    const routed = gridRoute(sizes, centers, edges, { seed })
-    if (routeScore(sizes, centers, edges, routed) < routeScore(sizes, centers, edges, polylines)) {
-      polylines = routed
-    }
-  }
+  const { centers, polylines } = placement
 
   const placedBoxes = sizes.map(([width, height], i): BBox => ({
     x: Math.round(centers[i]![0] - width / 2),

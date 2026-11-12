@@ -138,7 +138,8 @@ describe('surround scoring', () => {
         outer: [2, 3, 4, 5],
       }
       // The larger case exceeds the cache memory limit and exercises the uncached path.
-      const fresh = () => new SurroundState(graph, buildSlots(graph, 16 / 9, 4), random(3))
+      const fresh = (indexed = true) =>
+        new SurroundState(graph, buildSlots(graph, 16 / 9, 4), random(3), undefined, indexed)
       const warm = fresh()
       const scores = (st: SurroundState) => [
         st.cost([0]),
@@ -182,7 +183,7 @@ describe('surround scoring', () => {
       scores(warm)
       for (let i = 0; i < moves.length; i++) {
         moves[i]!(warm)
-        const cold = fresh()
+        const cold = fresh(false)
         for (const move of moves.slice(0, i + 1)) {
           move(cold)
         }

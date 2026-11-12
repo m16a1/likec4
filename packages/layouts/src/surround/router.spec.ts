@@ -1,7 +1,8 @@
 import type { Point } from '@likec4/core/geometry'
 import { createHash } from 'node:crypto'
-import { describe, it } from 'vitest'
+import { describe, it, vi } from 'vitest'
 import { orthoMetrics } from './metrics'
+import { RouteCache } from './route-cache'
 import { gridRoute } from './router'
 
 type XY = Point
@@ -18,6 +19,15 @@ function measure(sizes: XY[], centers: XY[], edges: Array<readonly [number, numb
 }
 
 describe('gridRoute', () => {
+  it('reuses stable searches without changing rerouting results', ({ expect, onTestFinished }) => {
+    const get = vi.spyOn(RouteCache.prototype, 'get')
+    onTestFinished(() => get.mockRestore())
+    const sizes: XY[] = Array.from({ length: 6 }, () => [240, 150])
+    const centers: XY[] = [[-800, -600], [-800, 0], [-800, 600], [800, -600], [800, 0], [800, 600]]
+    const edges: Array<readonly [number, number]> = Array.from({ length: 9 }, (_, i) => [Math.floor(i / 3), 3 + i % 3])
+    expect(gridRoute(sizes, centers, edges)).toEqual(gridRoute(sizes, centers, edges, { reuseSearches: false }))
+    expect(get.mock.results.some(result => result.type === 'return' && result.value !== undefined)).toBe(true)
+  })
   it('preserves the original routes across heap growth and rerouting', ({ expect }) => {
     // K3,3 requires a crossing and keeps the rerouting searches active.
     const sizes: XY[] = Array.from({ length: 6 }, () => [240, 150])

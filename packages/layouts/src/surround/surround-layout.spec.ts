@@ -1,3 +1,4 @@
+import { isElementView } from '@likec4/core'
 import { Builder } from '@likec4/core/builder'
 import { BBox, isOrthoSpline, splineToPolyline } from '@likec4/core/geometry'
 import type { DiagramNode, LayoutedView } from '@likec4/core/types'
@@ -5,6 +6,7 @@ import { describe, it } from 'vitest'
 import { GraphvizLayouter } from '../graphviz/GraphvizLayoter'
 import { GraphvizWasmAdapter } from '../graphviz/wasm/GraphvizWasmAdapter'
 import { orthoMetrics } from './metrics'
+import { surroundLayout } from './surround-layout'
 
 function buildModel() {
   return Builder
@@ -100,6 +102,36 @@ const contains = (outer: DiagramNode, inner: DiagramNode) =>
   && inner.x + inner.width <= outer.x + outer.width && inner.y + inner.height <= outer.y + outer.height
 
 describe('surround placement', () => {
+  it('reuses searches without retaining stale view data or sharing mutable output', async ({ expect }) => {
+    const input = await layout('ranked')
+    if (!isElementView(input)) {
+      throw new Error('Expected an element view')
+    }
+    const options = { iterations: 200, seed: 237 }
+    const uncached = surroundLayout(input, { ...options, cache: false })
+    expect(surroundLayout(input, options)).toEqual(uncached)
+    const first = surroundLayout(input, options)!
+    first.nodes[0]!.x += 1000
+    first.edges[0]!.points.push([1000, 1000])
+    expect(surroundLayout(input, options)).toEqual(uncached)
+
+    const inputs = [
+      { ...input, nodes: input.nodes.map(n => ({ ...n, title: `${n.title} updated` })) },
+      { ...input, nodes: input.nodes.map(n => ({ ...n, width: n.width + 30 })) },
+      { ...input, edges: [...input.edges].reverse() },
+      {
+        ...input,
+        nodes: input.nodes.map(n => ({ ...n, labelBBox: { ...n.labelBBox, x: n.labelBBox.x + 10 } })),
+      },
+    ]
+    for (const changed of inputs) {
+      expect(surroundLayout(changed, options)).toEqual(surroundLayout(changed, { ...options, cache: false }))
+    }
+    for (const changed of [{ seed: 238 }, { iterations: 300 }, { restarts: 2 }, { aspect: 1.3 }]) {
+      const next = { ...options, ...changed }
+      expect(surroundLayout(input, next)).toEqual(surroundLayout(input, { ...next, cache: false }))
+    }
+  })
   it('uses surround placement when placement is omitted', async ({ expect }) => {
     const [implicit, explicit] = await Promise.all([layout('default'), layout('surround')])
     expect(implicit.routing).toBe('ortho')

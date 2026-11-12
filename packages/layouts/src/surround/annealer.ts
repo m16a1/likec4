@@ -1,4 +1,5 @@
 import type { Point } from '@likec4/core/geometry'
+import { SpatialIndex } from './spatial-index'
 
 /**
  * Crossing minimisation for the `surround` placement: boxes on slots, each arrow an orthogonal
@@ -232,6 +233,11 @@ export class SurroundState {
   private readonly boxCache: InteractionCache | null
   private readonly pairCodes: Uint32Array
   private readonly boxCodes: Uint32Array
+  private readonly routeIndex: SpatialIndex | null
+  private readonly boxIndex: SpatialIndex | null
+  private readonly allEdges: number[]
+  private readonly allNodes: number[]
+  private readonly activeBoxes: number[] = []
   /** Interacting routes per segment, always in the original edge order. */
   private readonly activePairs: number[][] = Array.from({ length: MAX_SEGMENTS }, () => [])
 
@@ -240,6 +246,7 @@ export class SurroundState {
     readonly slots: SurroundSlots,
     rnd: () => number,
     outerOrder?: ReadonlyArray<number>,
+    indexed = true,
   ) {
     const n = graph.sizes.length
     const m = graph.edges.length
@@ -250,6 +257,19 @@ export class SurroundState {
     this.boxCache = cache ? new InteractionCache(m, n) : null
     this.pairCodes = new Uint32Array(m)
     this.boxCodes = new Uint32Array(n)
+    this.allEdges = graph.edges.map((_, e) => e)
+    this.allNodes = graph.sizes.map((_, node) => node)
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+    for (const [x, y] of [...slots.inner, ...slots.outer]) {
+      x0 = Math.min(x0, x)
+      y0 = Math.min(y0, y)
+      x1 = Math.max(x1, x)
+      y1 = Math.max(y1, y)
+    }
+    const margin = graph.sizes.reduce((max, [w, h]) => Math.max(max, w, h), 60) + MIN_GAP + SHRINK
+    const bounds = [x0 - margin, y0 - margin, x1 + margin, y1 + margin] as const
+    this.routeIndex = indexed ? new SpatialIndex(m, bounds) : null
+    this.boxIndex = indexed ? new SpatialIndex(n, bounds) : null
     this.centers = Array.from({ length: n }, (): XY => [0, 0])
     this.boxes = Array.from({ length: n }, (): [number, number, number, number] => [0, 0, 0, 0])
     this.slotOf = Array.from({ length: n }, (): Slot => ({ outer: false, index: 0 }))
@@ -335,6 +355,9 @@ export class SurroundState {
   }
 
   place(node: number, slot: Slot) {
+    if (this.boxVersions[node]! > 0) {
+      this.indexBox(node, false)
+    }
     this.boxVersions[node]!++
     this.slotOf[node] = slot
     const [x, y] = slot.outer ? this.slots.outer[slot.index]! : this.slots.inner[slot.index]!
@@ -346,6 +369,39 @@ export class SurroundState {
     this.centers[node] = [x, y]
     const [w, h] = this.graph.sizes[node]!
     this.boxes[node] = [x - w / 2 + SHRINK, y - h / 2 + SHRINK, x + w / 2 - SHRINK, y + h / 2 - SHRINK]
+    this.indexBox(node, true)
+  }
+
+  private indexBox(node: number, insert: boolean) {
+    const [x0, y0, x1, y1] = this.boxes[node]!
+    const margin = MIN_GAP + SHRINK
+    this.boxIndex?.update(node, x0 - margin, y0 - margin, x1 + margin, y1 + margin, insert)
+  }
+
+  private indexSegments(e: number, insert: boolean) {
+    for (const s of this.segments[e]!) {
+      this.routeIndex?.update(
+        e,
+        s.horiz ? s.lo : s.c,
+        s.horiz ? s.c : s.lo,
+        s.horiz ? s.hi : s.c,
+        s.horiz ? s.c : s.hi,
+        insert,
+      )
+    }
+  }
+
+  private nearby(e: number, index: SpatialIndex, margin: number): ReadonlyArray<number> {
+    index.clearQuery()
+    for (const s of this.segments[e]!) {
+      index.include(
+        (s.horiz ? s.lo : s.c) - margin,
+        (s.horiz ? s.c : s.lo) - margin,
+        (s.horiz ? s.hi : s.c) + margin,
+        (s.horiz ? s.c : s.hi) + margin,
+      )
+    }
+    return index.values()
   }
 
   occupant(slot: Slot): number | undefined {
@@ -363,6 +419,7 @@ export class SurroundState {
   /** Recomputes polylines and segments of the given arrows */
   refresh(edges: Iterable<number>) {
     for (const e of edges) {
+      this.indexSegments(e, false)
       this.routeVersions[e]!++
       const polyline = this.polyline(e)
       this.polylines[e] = polyline
@@ -387,6 +444,7 @@ export class SurroundState {
         )
       }
       this.segments[e] = segments
+      this.indexSegments(e, true)
     }
   }
 
@@ -496,7 +554,8 @@ export class SurroundState {
       for (const active of this.activePairs) {
         active.length = 0
       }
-      for (let e = 0; e < edges.length; e++) {
+      const nearbyEdges = this.routeIndex ? this.nearby(k, this.routeIndex, MIN_GAP) : this.allEdges
+      for (const e of nearbyEdges) {
         if (e !== k) {
           const code = this.pairCode(k, e)
           if (code === 0) {
@@ -512,9 +571,15 @@ export class SurroundState {
           }
         }
       }
-      for (let node = 0; node < this.boxes.length; node++) {
+      this.activeBoxes.length = 0
+      const nearbyBoxes = this.boxIndex ? this.nearby(k, this.boxIndex, 0) : this.allNodes
+      for (const node of nearbyBoxes) {
         if (node !== ks && node !== kt) {
-          this.boxCodes[node] = this.edgeBoxCode(k, node)
+          const code = this.edgeBoxCode(k, node)
+          if (code !== 0) {
+            this.boxCodes[node] = code
+            this.activeBoxes.push(node)
+          }
         }
       }
       for (let i = 0; i < this.segments[k]!.length; i++) {
@@ -538,15 +603,21 @@ export class SurroundState {
             total += PAIR_WEIGHTS[third]! * w
           }
         }
-        for (let node = 0; node < this.boxes.length; node++) {
-          if (node !== ks && node !== kt) {
-            total += BOX_WEIGHTS[(this.boxCodes[node]! >>> (i * 2)) & 3]!
-          }
+        for (const node of this.activeBoxes) {
+          total += BOX_WEIGHTS[(this.boxCodes[node]! >>> (i * 2)) & 3]!
         }
       }
     }
     if (moved.length > 0) {
-      for (let e = 0; e < edges.length; e++) {
+      if (this.routeIndex) {
+        this.routeIndex.clearQuery()
+        for (const node of moved) {
+          const [x0, y0, x1, y1] = this.boxes[node]!
+          const margin = MIN_GAP + SHRINK
+          this.routeIndex.include(x0 - margin, y0 - margin, x1 + margin, y1 + margin)
+        }
+      }
+      for (const e of this.routeIndex?.values() ?? this.allEdges) {
         if (inK[e]) {
           continue
         }
