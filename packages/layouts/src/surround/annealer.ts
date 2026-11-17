@@ -127,6 +127,11 @@ function shuffle<T>(items: T[], rnd: () => number): T[] {
   return items
 }
 
+/** Index wrapped into [0, size); JS % returns a negative value for a negative dividend */
+function wrap(index: number, size: number): number {
+  return ((index % size) + size) % size
+}
+
 function maxOf(values: ReadonlyArray<number>): number {
   return values.reduce((a, b) => Math.max(a, b), 0)
 }
@@ -778,7 +783,7 @@ export function anneal(graph: SurroundGraph, options: AnnealOptions): AnnealResu
         const node = movable[randInt(movable.length)]!
         const from = st.slotOf[node]!
         const to: Slot = from.outer
-          ? { outer: true, index: rnd() < 0.8 ? (from.index + randInt(25) - 12 + nout) % nout : randInt(nout) }
+          ? { outer: true, index: rnd() < 0.8 ? wrap(from.index + randInt(25) - 12, nout) : randInt(nout) }
           : { outer: false, index: randInt(nin) }
         if (to.index === from.index) {
           break

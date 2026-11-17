@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { describe, it } from 'vitest'
 import { type SurroundGraph, anneal, buildSlots, random, SurroundState } from './annealer'
+import { circularOrder } from './order'
 
 describe('surround scoring', () => {
   it('preserves the original scores and geometry across seeded searches', ({ expect }) => {
@@ -191,4 +192,28 @@ describe('surround scoring', () => {
       }
     })
   }
+})
+
+describe('anneal on small frames', () => {
+  it('wraps ring moves larger than the frame', ({ expect }) => {
+    // Captured from a team view with two boundary groups: its ring has 10 slots, so a move
+    // of -12 went negative and destructuring the absent slot at index -1 crashed the layout
+    const graph: SurroundGraph = {
+      sizes: [[320, 180], [320, 180], [320, 204], [330, 180], [330, 180], [320, 180]],
+      edges: [[0, 4], [0, 3], [1, 3], [2, 4], [2, 3], [3, 4], [4, 1], [3, 5], [3, 1]],
+      inner: [3, 4],
+      outer: [0, 1, 2, 5],
+    }
+    expect(buildSlots(graph, 16 / 9, 4).outer.length).toBeLessThan(12)
+    expect(() =>
+      anneal(graph, {
+        seed: 1,
+        iterations: 20_000,
+        aspect: 16 / 9,
+        spare: 4,
+        outerOrder: circularOrder(graph, random(1)),
+        t0: 0.3,
+      })
+    ).not.toThrow()
+  })
 })
