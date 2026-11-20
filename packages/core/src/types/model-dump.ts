@@ -57,6 +57,7 @@ export type LikeC4ModelDump = {
     predicates?: {}
     dynamicPredicates?: {}
     styles?: {}
+    filters?: ReadonlyArray<unknown>
   }
   imports?: {}
 }

@@ -51,6 +51,19 @@ export function GlobalsParser<TBase extends WithViewsParser>(B: TBase) {
           this.logError(e, style, 'globals')
         }
       }
+
+      const filters = globals.flatMap(r => r.filters.filter(isValid))
+      for (const filter of filters) {
+        try {
+          const parsed = this.parseViewRuleFilter(filter)
+          c4Globals.filters = [
+            ...(c4Globals.filters ?? []),
+            parsed,
+          ]
+        } catch (e) {
+          this.logError(e, filter, 'globals')
+        }
+      }
     }
 
     parseAndStoreGlobalPredicateGroupOrDynamic(

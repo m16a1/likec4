@@ -562,7 +562,18 @@ A condição usa a mesma sintaxe `where` dos predicados `include` e `exclude`, i
 filter 'Componentes críticos' where metadata.critical is true
 ```
 
-Filtros são herdados por views que usam `extends`. Eles se aplicam ao diagrama interativo; exports
+Para aplicar os mesmos filtros em todas as views de elementos e de deployment do projeto, declare-os dentro de `global`:
+
+```likec4
+global {
+  filter 'Sistemas externos' where tag is #external
+  filter 'Sistemas governamentais' where tag is #government
+  filter 'On-premises' where tag is #on-premises
+}
+```
+
+Um `filter` definido na view com o mesmo rótulo sobrescreve o filtro global naquela view. Filtros
+também são herdados por views que usam `extends`. Eles se aplicam ao diagrama interativo; exports
 estáticos (`likec4 export`) renderizam a view sem os filtros aplicados.
 
 ## Grupos

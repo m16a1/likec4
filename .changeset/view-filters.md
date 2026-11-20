@@ -6,4 +6,4 @@
 '@likec4/diagram': patch
 ---
 
-Add `filter` view rules that define interactive filter checkboxes in the diagram's top navigation panel. Filters are enabled by default; clearing a checkbox hides matching elements, their nested children, and connected relationships. Filters can be reused through inherited views.
+Add `filter` rules (per view or project-wide in `global`) that define interactive filter checkboxes in the diagram's top navigation panel. Filters are enabled by default; clearing a checkbox hides matching elements, their nested children, and connected relationships. Filters can be defined globally in `global { ... }`, per view, or reused through inherited views.

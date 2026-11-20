@@ -562,8 +562,19 @@ The condition uses the same `where` syntax as `include` and `exclude` predicates
 filter 'Critical components' where metadata.critical is true
 ```
 
-Filters are inherited by views that use `extends`. They apply to the interactive diagram; static
-exports (`likec4 export`) render the view without filters applied.
+To apply the same filters across every element and deployment view in the project, declare them inside `global`:
+
+```likec4
+global {
+  filter 'External systems' where tag is #external
+  filter 'Government systems' where tag is #government
+  filter 'On-premises systems' where tag is #on-premises
+}
+```
+
+A per-view `filter` with the same label overrides the global filter in that view. Filters are also
+inherited by views that use `extends`. They apply to the interactive diagram; static exports
+(`likec4 export`) render the view without filters applied.
 
 ## Groups
 

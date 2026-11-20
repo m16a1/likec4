@@ -265,5 +265,8 @@ export function sanitizeGlobals<A extends AnyAux>(
     predicates: pickBy(predicates, (v): v is GlobalPredicates<A> => hasAtLeast(v, 1)),
     dynamicPredicates: pickBy(dynamicPredicates, (v): v is GlobalDynamicPredicates<A> => hasAtLeast(v, 1)),
     styles: pickBy(styles, (v): v is GlobalStyles<A> => hasAtLeast(v, 1)),
+    ...(globals.filters && globals.filters.length > 0 && {
+      filters: [...globals.filters],
+    }),
   }
 }

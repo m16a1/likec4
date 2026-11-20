@@ -211,6 +211,86 @@ describe('LikeC4', () => {
     ])
   })
 
+  it('should apply global filters to element and deployment views and allow per-view overrides', async ({ expect }) => {
+    const likec4 = await LikeC4.fromSource(`
+      specification {
+        element system
+        deploymentNode env
+        tag external
+        tag government
+        tag on-premises
+        tag critical
+      }
+      model {
+        system core 'Core Platform'
+        system stripe 'Stripe' {
+          #external
+        }
+        core -> stripe 'Charges'
+      }
+      deployment {
+        env prod 'Production' {
+          instanceOf core
+          instanceOf stripe
+        }
+      }
+      global {
+        filter 'External systems' where tag is #external
+        filter 'Government systems' where tag is #government
+      }
+      views {
+        view index {
+          include *
+        }
+        view custom {
+          include *
+          filter 'External systems' where tag is #critical
+          filter 'On-premises' where tag is #on-premises
+        }
+        deployment view prodView {
+          include prod.**
+        }
+      }
+    `)
+    expect(likec4.hasErrors()).toBe(false)
+
+    const computed = likec4.syncComputedModel()
+    expect(computed.view('index').$view.filters).toEqual([
+      {
+        filter: 'External systems',
+        where: { tag: { eq: 'external' } },
+      },
+      {
+        filter: 'Government systems',
+        where: { tag: { eq: 'government' } },
+      },
+    ])
+    expect(computed.view('custom').$view.filters).toEqual([
+      {
+        filter: 'External systems',
+        where: { tag: { eq: 'critical' } },
+      },
+      {
+        filter: 'Government systems',
+        where: { tag: { eq: 'government' } },
+      },
+      {
+        filter: 'On-premises',
+        where: { tag: { eq: 'on-premises' } },
+      },
+    ])
+    expect(computed.view('prodView').$view.filters).toEqual([
+      {
+        filter: 'External systems',
+        where: { tag: { eq: 'external' } },
+      },
+      {
+        filter: 'Government systems',
+        where: { tag: { eq: 'government' } },
+      },
+    ])
+  })
+
   it('should parse source and build layouted model', async ({ expect }) => {
     const likec4 = await LikeC4.fromSource(`
       specification {

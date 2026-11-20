@@ -1,6 +1,7 @@
 import type { Tagged } from 'type-fest'
 import type { Any } from './_aux'
 import type { NonEmptyArray } from './_common'
+import type { ViewRuleFilter } from './view-common'
 import type { DynamicViewIncludeRule } from './view-parsed.dynamic'
 import type { ElementViewPredicate, ElementViewRuleStyle } from './view-parsed.element'
 
@@ -18,4 +19,5 @@ export interface ModelGlobals<A extends Any = Any> {
   readonly predicates: Record<GlobalPredicateId, GlobalPredicates<A>>
   readonly dynamicPredicates: Record<GlobalPredicateId, GlobalDynamicPredicates<A>>
   readonly styles: Record<GlobalStyleID, GlobalStyles<A>>
+  readonly filters?: ReadonlyArray<ViewRuleFilter<A>>
 }

@@ -54,6 +54,7 @@ style ELEMENT_EXPRESSION, ... {
   // Apply style properties to elements matching the expressions
 }
 global style STYLE_GROUP_IDENTIFIER
+filter 'LABEL' where CONDITION
 autoLayout TopBottom|BottomTop|LeftRight|RightLeft [rankSep] [nodeSep] [spline|ortho]
 ```
 
@@ -190,6 +191,39 @@ views {
 ```
 
 Style groups can contain multiple `style` rules. They are applied in the order defined within the group. When used in a view, global styles sit between local styles and view-level styles in the cascade.
+
+## View Filters
+
+A `filter` rule adds an interactive checkbox to the diagram's top navigation panel. Filters are checked (enabled) by default; clearing one hides the matching elements, their nested children, and every connected relationship.
+
+Per-view filters belong to the view body:
+
+```likec4
+views {
+  view landscape {
+    include *
+    filter 'External systems' where tag is #external
+    filter 'Critical components' where metadata.critical is true
+  }
+}
+```
+
+Global filters belong to `global { ... }` and apply automatically to every element and deployment view in the project:
+
+```likec4
+global {
+  filter 'External systems' where tag is #external
+  filter 'Government systems' where tag is #government
+}
+
+views {
+  view landscape {
+    include *
+  }
+}
+```
+
+`where` uses the same conditions as `include`/`exclude` predicates. A per-view `filter` with the same label overrides the global filter in that view; other global filters stay. Filters are also inherited by views that use `extends`. Deployment views support both per-view and global filters.
 
 # Dynamic Views — Detailed Reference
 

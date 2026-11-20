@@ -125,6 +125,7 @@ export class MergedSpecification {
   ) {
     this.descriptionFileResolver = opts?.descriptionFile ?? (() => undefined)
     const tags = {} as ParsedAstSpecification['tags']
+    const filters: c4.ViewRuleFilter[] = []
     let projectIds = [] as c4.ProjectId[]
     for (const doc of docs) {
       const {
@@ -154,10 +155,16 @@ export class MergedSpecification {
       Object.assign(this.globals.predicates, c4Globals.predicates)
       Object.assign(this.globals.dynamicPredicates, c4Globals.dynamicPredicates)
       Object.assign(this.globals.styles, c4Globals.styles)
+      if (isNonEmptyArray(c4Globals.filters)) {
+        filters.push(...c4Globals.filters)
+      }
 
       for (const [projectId, fqn] of c4Imports) {
         this.imports.set(projectId, fqn)
       }
+    }
+    if (isNonEmptyArray(filters)) {
+      Object.assign(this.globals, { filters })
     }
     this.tags = assignTagColors(tags)
 

@@ -197,6 +197,23 @@ views {
 }
 ```
 
+### Global and per-view filters
+
+```likec4
+global {
+  filter 'External systems' where tag is #external
+}
+
+views {
+  view landscape {
+    include *
+    filter 'Critical components' where metadata.critical is true
+  }
+}
+```
+
+Global filters apply to every element and deployment view. A per-view `filter` with the same label overrides the global one. Clearing a checkbox hides matching elements and connected relationships.
+
 ### Deployment fixture with named instances
 
 ```likec4

@@ -224,7 +224,10 @@ export function computeDeploymentView<M extends AnyAux>(
   const autoLayoutRule = findLast(rules, isViewRuleAutoLayout)
 
   const elementNotations = buildElementNotations(nodes)
-  const filters = collectDeploymentViewFilters<M>(rules)
+  const filters = collectDeploymentViewFilters<M>(
+    rules,
+    likec4model.globals.filters,
+  )
 
   return calcViewLayoutHash({
     ...withResolvedRouting(view, likec4model.$styles.defaults.view.routing),
@@ -259,8 +262,17 @@ export function computeDeploymentView<M extends AnyAux>(
 
 function collectDeploymentViewFilters<A extends AnyAux>(
   rules: ReadonlyArray<object>,
+  globalFilters?: ReadonlyArray<ViewRuleFilter<A>>,
 ): ViewRuleFilter<A>[] {
   const byTitle = new Map<string, ViewRuleFilter<A>>()
+  if (globalFilters) {
+    for (const rule of globalFilters) {
+      byTitle.set(rule.filter, {
+        filter: rule.filter,
+        where: rule.where,
+      })
+    }
+  }
   for (const rule of rules) {
     if (isViewRuleFilter<A>(rule)) {
       byTitle.set(rule.filter, {

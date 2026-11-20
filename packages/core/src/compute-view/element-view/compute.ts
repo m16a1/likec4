@@ -328,7 +328,10 @@ export function computeElementView<A extends AnyAux>(
 
   const nodeNotations = buildElementNotations(nodes)
   const ranks = collectRankConstraints(rules, nodes)
-  const filters = collectViewFilters<A>(rules)
+  const filters = collectViewFilters<A>(
+    rules,
+    (likec4model.globals as unknown as ModelGlobals<A>).filters,
+  )
 
   return calcViewLayoutHash({
     ...withResolvedRouting(view, likec4model.$styles.defaults.view.routing),
@@ -357,8 +360,17 @@ export function computeElementView<A extends AnyAux>(
 
 function collectViewFilters<A extends AnyAux>(
   rules: ReadonlyArray<object>,
+  globalFilters?: ReadonlyArray<ViewRuleFilter<A>>,
 ): ViewRuleFilter<A>[] {
   const byTitle = new Map<string, ViewRuleFilter<A>>()
+  if (globalFilters) {
+    for (const rule of globalFilters) {
+      byTitle.set(rule.filter, {
+        filter: rule.filter,
+        where: rule.where,
+      })
+    }
+  }
   for (const rule of rules) {
     if (isViewRuleFilter<A>(rule)) {
       byTitle.set(rule.filter, {

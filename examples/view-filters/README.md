@@ -31,21 +31,27 @@ and `Data Platform` with the customer and government auditor actors.
 
 ## DSL
 
+Filters can be declared once in a `global` block (applying automatically to every element and
+deployment view in the project) or per view:
+
 ```likec4
+global {
+  filter 'External systems' where tag is #external
+  filter 'Government systems' where tag is #government
+  filter 'On-premises systems' where tag is #on-premises
+}
+
 views {
   view landscape {
     title 'System Landscape'
     include *
-
-    filter 'External systems' where tag is #external
-    filter 'Government systems' where tag is #government
-    filter 'On-premises systems' where tag is #on-premises
   }
 }
 ```
 
 `where` accepts the same conditions as `include`/`exclude` predicates: tags, kinds, metadata, and
-their `and` / `or` / `not` combinations. The `containers` view demonstrates a metadata filter:
+their `and` / `or` / `not` combinations. A view can also add its own per-view filters (or override a
+global filter with the same label); the `containers` view adds a metadata filter:
 
 ```likec4
 filter 'Critical components' where metadata.critical is true
@@ -53,5 +59,5 @@ filter 'Critical components' where metadata.critical is true
 
 Clearing it hides the `Back Office` container together with its nested children.
 
-Filters are inherited by views that use `extends`, and they are available in any element or
-deployment view that declares them.
+Per-view filters are also inherited by views that use `extends`, and filters work in any element or
+deployment view.

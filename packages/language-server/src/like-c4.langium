@@ -1036,7 +1036,8 @@ Globals:
   name='global' '{'
     (
       predicates+=(GlobalPredicateGroup | GlobalDynamicPredicateGroup) |
-      styles+=(GlobalStyle | GlobalStyleGroup)
+      styles+=(GlobalStyle | GlobalStyleGroup) |
+      filters+=ViewRuleFilter
     )*
   '}';
 

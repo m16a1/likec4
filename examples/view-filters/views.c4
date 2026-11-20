@@ -1,34 +1,32 @@
+// Global filters apply automatically to all element and deployment views in the project.
+global {
+  filter 'External systems' where tag is #external
+  filter 'Government systems' where tag is #government
+  filter 'On-premises systems' where tag is #on-premises
+}
+
 views {
-  // Unscoped view: filters are defined on the view itself and
-  // appear as checkboxes in the top navigation panel.
+  // Inherits all global filters automatically.
   view landscape {
     title 'System Landscape'
     description 'Filter out external, government, or on-premises systems.'
 
     include *
-
-    filter 'External systems' where tag is #external
-    filter 'Government systems' where tag is #government
-    filter 'On-premises systems' where tag is #on-premises
   }
 
-  // Scoped view: filters combine with the scope and relationship predicates.
+  // Scoped view: inherits the global filters automatically.
   view corePlatformView of corePlatform {
     title 'Core Platform'
-    description 'Scoped view with the same filters.'
+    description 'Scoped view with the global filters.'
 
     include *
     include -> corePlatform
-
-    filter 'External systems' where tag is #external
-    filter 'Government systems' where tag is #government
-    filter 'On-premises systems' where tag is #on-premises
   }
 
-  // Filters may use any supported `where` condition, not only tags.
+  // Views can also declare additional per-view filters (or override a global filter by label).
   view containers of corePlatform {
     title 'Core Platform Containers'
-    description 'Metadata filter example.'
+    description 'Global filters plus a per-view metadata filter.'
 
     include *
 

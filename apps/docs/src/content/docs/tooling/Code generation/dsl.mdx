@@ -538,7 +538,7 @@ The generator prints what is in the data, and model data is not the source files
 
 - **Comments, formatting and the order of statements are lost.** The data has none of them. Elements are printed parents first, relationships after all elements.
 - **One output for the whole model.** A model read from many files, or extended across them, is printed as a single document; `extend` blocks are already merged into their elements.
-- **Some parts of a model are not printed** by `generate`: definitions of global predicates and styles, custom colors of the specification, elements imported from other projects, `diff` blocks and manual layouts. These keys of the data are ignored without an error.
+- **Some parts of a model are not printed** by `generate`: definitions of global predicates, styles and filters, custom colors of the specification, elements imported from other projects, `diff` blocks and manual layouts. These keys of the data are ignored without an error.
 - **Three view rules are not supported yet**: `global style`, `global predicate` and `rank`. A view with one of them cannot be printed, the generator throws `not implemented`. This applies to `likec4.toDSL()` as well.
 - **Values equal to the kind's defaults are omitted.** `generate` drops `description`, `summary`, `technology`, `tags` and style properties of an element when they repeat the specification of its kind.
 - **Empty lines between blocks are indented.** They contain the indentation of their block; trim trailing whitespace if it matters to you.

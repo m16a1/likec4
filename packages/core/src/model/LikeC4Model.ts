@@ -195,6 +195,9 @@ export class LikeC4Model<A extends Any = Any> {
         predicates: globals?.predicates ?? {},
         dynamicPredicates: globals?.dynamicPredicates ?? {},
         styles: globals?.styles ?? {},
+        ...(globals?.filters && globals.filters.length > 0 && {
+          filters: [...globals.filters],
+        }),
       },
       imports: imports ?? {},
       deployments: {
@@ -429,6 +432,9 @@ export class LikeC4Model<A extends Any = Any> {
       styles: {
         ...this.$data.globals?.styles,
       },
+      ...(this.$data.globals?.filters && this.$data.globals.filters.length > 0 && {
+        filters: [...this.$data.globals.filters],
+      }),
     }))
   }
 
