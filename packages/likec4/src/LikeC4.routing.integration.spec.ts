@@ -24,14 +24,17 @@ describe('view routing', () => {
       ${model}
       views {
         view ortho {
+          placement ranked
           routing ortho
           include *
         }
         view curved {
+          placement ranked
           routing: spline
           include *
         }
         view untouched {
+          placement ranked
           include *
         }
       }
@@ -48,14 +51,17 @@ describe('view routing', () => {
       ${model}
       views {
         view sugar {
+          placement ranked
           include *
           autoLayout TopBottom ortho
         }
         view sugarWithSpacing {
+          placement ranked
           include *
           autoLayout LeftRight 120 110 ortho
         }
         view propertyWins {
+          placement ranked
           routing spline
           include *
           autoLayout TopBottom ortho
@@ -82,9 +88,11 @@ describe('view routing', () => {
         ${model}
         views {
           view byDefault {
+            placement ranked
             include *
           }
           view overridden {
+            placement ranked
             routing spline
             include *
           }
