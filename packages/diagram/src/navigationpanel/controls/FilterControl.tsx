@@ -53,7 +53,7 @@ export function FilterControl() {
     diagram.setWhereFilter(where)
   }
 
-  const activeCount = hiddenFilters.length
+  const hiddenCount = hiddenFilters.length
 
   return (
     <Popover
@@ -70,7 +70,7 @@ export function FilterControl() {
             component={m.button}
             layout="position"
             aria-label="Filters"
-            aria-selected={opened || activeCount > 0}
+            aria-selected={opened || hiddenCount > 0}
             whileTap={{
               scale: 0.95,
               translateY: 1,
@@ -101,7 +101,7 @@ export function FilterControl() {
             )}
           >
             <IconFilter size={15} stroke={1.8} />
-            {activeCount > 0 && (
+            {hiddenCount > 0 && (
               <Box
                 css={{
                   fontSize: 'xxs',
@@ -109,7 +109,7 @@ export function FilterControl() {
                   lineHeight: '1',
                 }}
               >
-                {activeCount}
+                {hiddenCount}
               </Box>
             )}
           </UnstyledButton>
@@ -122,19 +122,19 @@ export function FilterControl() {
         <VStack gap="2" alignItems="stretch">
           <HStack justifyContent="space-between" gap="3">
             <Text size="xs" fw={600} c="dimmed">
-              Hide from diagram
+              Show systems
             </Text>
-            {activeCount > 0 && (
+            {hiddenCount > 0 && (
               <UnstyledButton
                 onClick={() => applyHiddenFilters([])}
                 style={{ fontSize: 11, opacity: 0.8 }}
               >
-                Reset
+                Show all
               </UnstyledButton>
             )}
           </HStack>
           {filters.map(item => {
-            const checked = hiddenFilters.includes(item.filter)
+            const checked = !hiddenFilters.includes(item.filter)
             return (
               <Checkbox
                 key={item.filter}
@@ -144,8 +144,8 @@ export function FilterControl() {
                 onChange={event => {
                   const isChecked = event.currentTarget.checked
                   const next = isChecked
-                    ? [...hiddenFilters, item.filter]
-                    : hiddenFilters.filter(f => f !== item.filter)
+                    ? hiddenFilters.filter(f => f !== item.filter)
+                    : [...hiddenFilters, item.filter]
                   applyHiddenFilters(next)
                 }}
               />

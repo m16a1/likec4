@@ -536,7 +536,8 @@ views {
 
 ## Filtros interativos
 
-Adicione regras `filter` a uma view para exibir checkboxes no painel superior de navegação:
+Adicione regras `filter` a uma view para exibir checkboxes no painel superior de navegação. Todos os
+filtros são habilitados (marcados) por padrão.
 
 ```likec4
 views {
@@ -550,9 +551,9 @@ views {
 }
 ```
 
-Ao ativar um filtro, os elementos correspondentes, seus filhos aninhados e todas as relações
-conectadas a eles são ocultados. Vários filtros são combinados, então ativar vários oculta a união
-das correspondências.
+Desmarcar um checkbox oculta os elementos correspondentes, seus filhos aninhados e todas as
+relações conectadas a eles. Vários filtros desmarcados ocultam a união das correspondências. Use
+**Show all** no popover para habilitar todos os filtros novamente.
 
 A condição usa a mesma sintaxe `where` dos predicados `include` e `exclude`, incluindo `and`,
 `or`, `not`, kinds e metadata:

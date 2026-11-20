@@ -536,7 +536,8 @@ views {
 
 ## Interactive filters
 
-Add `filter` rules to a view to expose checkboxes in the top navigation panel:
+Add `filter` rules to a view to expose checkboxes in the top navigation panel. All filters are
+enabled (checked) by default.
 
 ```likec4
 views {
@@ -550,9 +551,9 @@ views {
 }
 ```
 
-Enabling a filter hides the matching elements, their nested children, and all relationships
-connected to them. Multiple filters are combined, so enabling several filters hides the union of
-their matches.
+Clearing a checkbox hides the matching elements, their nested children, and all relationships
+connected to them. Multiple cleared filters hide the union of their matches. Use **Show all** in the
+popover to enable every filter again.
 
 The condition uses the same `where` syntax as `include` and `exclude` predicates, including
 `and`, `or`, `not`, kinds, and metadata:
