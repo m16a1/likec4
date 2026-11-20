@@ -144,6 +144,73 @@ describe('LikeC4', () => {
     expect(prodNotDbIds).not.toContain('container.stagingApi')
   })
 
+  it('should parse view filter rules and propagate them to computed and layouted views', async ({ expect }) => {
+    const likec4 = await LikeC4.fromSource(`
+      specification {
+        element system
+        tag external
+        tag government
+        tag on-premises
+      }
+      model {
+        system core 'Core'
+        system stripe 'Stripe' {
+          #external
+        }
+        system tax 'Tax API' {
+          #external, #government
+        }
+        system erp 'Legacy ERP' {
+          #on-premises
+        }
+        core -> stripe 'Charges'
+        core -> tax 'Reports'
+        core -> erp 'Syncs'
+      }
+      views {
+        view index {
+          include *
+          filter 'External systems' where tag is #external
+          filter 'Government systems' where tag is #government
+          filter 'On-premises' where tag is #on-premises
+        }
+      }
+    `)
+    expect(likec4.hasErrors()).toBe(false)
+
+    const computed = likec4.syncComputedModel()
+    expect(computed.view('index').$view.filters).toEqual([
+      {
+        filter: 'External systems',
+        where: { tag: { eq: 'external' } },
+      },
+      {
+        filter: 'Government systems',
+        where: { tag: { eq: 'government' } },
+      },
+      {
+        filter: 'On-premises',
+        where: { tag: { eq: 'on-premises' } },
+      },
+    ])
+
+    const layouted = await likec4.layoutedModel()
+    expect(layouted.view('index').$view.filters).toEqual([
+      {
+        filter: 'External systems',
+        where: { tag: { eq: 'external' } },
+      },
+      {
+        filter: 'Government systems',
+        where: { tag: { eq: 'government' } },
+      },
+      {
+        filter: 'On-premises',
+        where: { tag: { eq: 'on-premises' } },
+      },
+    ])
+  })
+
   it('should parse source and build layouted model', async ({ expect }) => {
     const likec4 = await LikeC4.fromSource(`
       specification {
@@ -363,6 +430,13 @@ describe('LikeC4', () => {
             "demo-rank-for-better-layout.c4",
           ],
           "folder": "rank-for-better-layout",
+        },
+        "view-filters": {
+          "documents": [
+            "model.c4",
+            "views.c4",
+          ],
+          "folder": "view-filters",
         },
       }
     `)

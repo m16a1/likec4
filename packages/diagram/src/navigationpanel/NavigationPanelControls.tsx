@@ -8,6 +8,7 @@ import { useOptionalCurrentViewModel } from '../hooks/useCurrentViewModel'
 import { selectDiagramSnapshot, useDiagramSelector } from '../hooks/useDiagram'
 import { isComparingLayouts } from '../likec4diagram/state/machine.setup'
 import {
+  FilterControl,
   LayoutWarning,
   LogoButton,
   NavigationButtons,
@@ -67,6 +68,7 @@ export const NavigationPanelControls = memo(() => {
     editBtnVisible,
     isReadOnly,
     isEditing,
+    viewId,
     viewTitle,
     isDynamicView,
     isElementView,
@@ -107,6 +109,7 @@ export const NavigationPanelControls = memo(() => {
             elementViewVariant={elementViewVariant}
             disabled={isComparing || isEditing} />
         )}
+        {!isComparing && <FilterControl key={`filter-control-${viewId}`} />}
         {enableSearch && !isComparing && <SearchControl key="search-control" />}
         <LayoutWarning key="outdated-manual-layout-warning" />
       </m.div>

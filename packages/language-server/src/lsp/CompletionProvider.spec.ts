@@ -392,6 +392,7 @@ describe('LikeC4CompletionProvider', () => {
         'style',
         'autoLayout',
         'rank',
+        'filter',
       ],
       disposeAfterCheck: true,
     })
@@ -433,6 +434,7 @@ describe('LikeC4CompletionProvider', () => {
         'style',
         'autoLayout',
         'rank',
+        'filter',
       ],
       disposeAfterCheck: true,
     })
@@ -566,6 +568,7 @@ describe('LikeC4CompletionProvider', () => {
         'style',
         'autoLayout',
         'rank',
+        'filter',
       ],
       disposeAfterCheck: true,
     })
@@ -639,6 +642,7 @@ describe('LikeC4CompletionProvider', () => {
         'style',
         'autoLayout',
         'rank',
+        'filter',
       ],
       disposeAfterCheck: true,
     })

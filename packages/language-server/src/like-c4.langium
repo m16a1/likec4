@@ -439,7 +439,12 @@ ViewRule:
   ViewRuleGroup |
   ViewRuleStyleOrGlobalRef |
   ViewRuleAutoLayout |
-  ViewRuleRank
+  ViewRuleRank |
+  ViewRuleFilter
+;
+
+ViewRuleFilter:
+  'filter' title=String 'where' where=WhereElementExpression
 ;
 
 ViewRuleRank:
@@ -948,7 +953,8 @@ DeploymentViewRule:
   DeploymentViewRuleGroup |
   DeploymentViewRuleStyle |
   ViewRuleAutoLayout |
-  ViewRuleAncestors
+  ViewRuleAncestors |
+  ViewRuleFilter
 ;
 
 DeploymentViewRuleGroup:
@@ -1296,7 +1302,7 @@ Id returns string:
   EdgeRoutingValue |
   ViewPlacementValue |
   // Allow reserved keywords as Id
-  'element' | 'model' | 'group' | 'node' | 'deployment' | 'instance' | 'relationship' | 'diff' | 'add' | 'remove' | 'routing' | 'placement';
+  'element' | 'model' | 'group' | 'node' | 'deployment' | 'instance' | 'relationship' | 'diff' | 'add' | 'remove' | 'routing' | 'placement' | 'filter';
 
 HashId returns string:
   Hash Id;

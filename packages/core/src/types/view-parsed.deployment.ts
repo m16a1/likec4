@@ -8,6 +8,7 @@ import type {
   AnyViewRuleStyle,
   BaseParsedViewProperties,
   ViewRuleAutoLayout,
+  ViewRuleFilter,
 } from './view-common'
 import type { ElementViewRuleGroup } from './view-parsed.element'
 
@@ -37,6 +38,7 @@ export type DeploymentViewRule<A extends AnyAux = Unknown> = ExclusiveUnion<{
   AutoLayout: ViewRuleAutoLayout
   IncludeAncestors: ParsedViewRuleAncestors
   Group: DeploymentViewRuleGroup<A>
+  Filter: ViewRuleFilter<A>
 }>
 
 export interface ParsedViewRuleAncestors {

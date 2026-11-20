@@ -198,4 +198,28 @@ describe('diagramToXY accessibility', () => {
       'Checkout. Group. Contains 1 node. Notes: Important boundary.',
     )
   })
+
+  it('hides filtered nodes, their children, and connected edges when a where filter is active', () => {
+    const core = testNode('core', { tags: [] })
+    const externalParent = testNode('ext', {
+      tags: ['external' as scalar.Tag],
+      children: [scalar.NodeId('ext.api')],
+    })
+    const externalChild = testNode('ext.api', {
+      parent: externalParent.id,
+      tags: [],
+    })
+    const stream = testEdge('core-ext', core, externalChild)
+
+    const { xynodes, xyedges } = diagramToXY({
+      view: testView([core, externalParent, externalChild], [stream]),
+      currentViewId: undefined,
+      where: { not: { tag: { eq: 'external' } } },
+    })
+
+    expect(xynodes.find(n => n.id === 'core')?.hidden).toBe(false)
+    expect(xynodes.find(n => n.id === 'ext')?.hidden).toBe(true)
+    expect(xynodes.find(n => n.id === 'ext.api')?.hidden).toBe(true)
+    expect(xyedges[0]?.hidden).toBe(true)
+  })
 })

@@ -79,6 +79,9 @@ export function DeploymentViewParser<TBase extends WithExpressionV2 & WithDeploy
       if (ast.isDeploymentViewRuleStyle(astRule)) {
         return this.parseDeploymentViewRuleStyle(astRule)
       }
+      if (ast.isViewRuleFilter(astRule)) {
+        return this.parseViewRuleFilter(astRule)
+      }
       nonexhaustive(astRule)
     }
 

@@ -374,6 +374,13 @@ export class DiagramApi<A extends Any = Unknown> {
   }
 
   /**
+   * Update active runtime `where` filter on the diagram
+   */
+  setWhereFilter(where: t.WhereOperator<A> | null): void {
+    this.send({ type: 'update.where', where: where as any })
+  }
+
+  /**
    * Toggle sequence flow collapse/expand
    */
   toggleSequenceFlow(flowId: t.StepPath): void {

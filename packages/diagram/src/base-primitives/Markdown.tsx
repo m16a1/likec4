@@ -1,4 +1,4 @@
-import { type RichTextOrEmpty as RichTextType, isRichText } from '@likec4/core/types'
+import { type RichTextOrEmpty as RichTextType, isRichText, RichText } from '@likec4/core/types'
 import { nonNullable } from '@likec4/core/utils'
 import { cx } from '@likec4/styles/css'
 import { Box } from '@likec4/styles/jsx'
@@ -54,6 +54,19 @@ export const Markdown = forwardRef<HTMLDivElement, MarkdownProps>(({
   fontSize,
   ...props
 }, ref) => {
+  // Values may come from another copy of the core package (or from serialized model data),
+  // where `instanceof RichText` fails. Normalize them before checking for html.
+  if (!isRichText(value) && !('html' in value && typeof value.html === 'string')) {
+    const foreign = value as unknown as { isEmpty?: boolean; md?: string; txt?: string }
+    value = RichText.from(
+      foreign.isEmpty
+        ? null
+        : foreign.md != null
+        ? { md: foreign.md }
+        : { txt: foreign.txt ?? '' },
+    )
+  }
+
   if (isRichText(value) && value.isEmpty && hideIfEmpty) {
     return null
   }

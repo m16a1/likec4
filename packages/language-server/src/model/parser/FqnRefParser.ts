@@ -13,7 +13,7 @@ import {
 import { projectIdFrom } from '../../utils'
 import { importsRef, instanceRef } from '../../utils/fqnRef'
 import { createBinaryOperator, parseWhereClause } from '../model-parser-where'
-import { type Base, removeIndent } from './Base'
+import { type Base, removeIndent, toSingleLine } from './Base'
 
 export type WithExpressionV2 = ReturnType<typeof ExpressionV2Parser>
 
@@ -479,6 +479,15 @@ export function ExpressionV2Parser<TBase extends Base>(B: TBase) {
 
     wrapInWhere(expr: c4.RelationExpr, condition: c4.WhereOperator | null): c4.RelationExpr.OrWhere {
       return condition ? { where: { expr, condition } } : expr
+    }
+
+    parseViewRuleFilter(astNode: ast.ViewRuleFilter): c4.ViewRuleFilter {
+      return {
+        filter: toSingleLine(astNode.title) ?? '',
+        where: astNode.where ? parseWhereClause(astNode.where) : {
+          kind: { neq: '--always-true--' },
+        },
+      }
     }
   }
 }

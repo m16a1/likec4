@@ -143,6 +143,7 @@ export function diagramToXY(opts: {
   // namespace to force unique ids
   const ns = ''
   const nodeById = (id: Fqn) => nonNullable(nodeLookup.get(id), `Node not found: ${id}`)
+  const hiddenNodeIds = new Set<Fqn>()
 
   let next: TraverseItem | undefined
   while ((next = queue.dequeue())) {
@@ -164,6 +165,11 @@ export function diagramToXY(opts: {
     }
 
     const id = ns + node.id as NodeId
+    const isHidden = (parent ? hiddenNodeIds.has(parent.id) : false)
+      || (node.kind !== GroupElementKind && !visiblePredicate(node))
+    if (isHidden) {
+      hiddenNodeIds.add(node.id)
+    }
 
     const base = {
       id,
@@ -178,7 +184,7 @@ export function diagramToXY(opts: {
       className: diffClassName(node.diffStatus),
       initialWidth: node.width,
       initialHeight: node.height,
-      hidden: node.kind !== GroupElementKind && !visiblePredicate(node),
+      hidden: isHidden,
       ...(parent && {
         parentId: ns + parent.id,
       }),
@@ -334,7 +340,7 @@ export function diagramToXY(opts: {
       ariaLabel: edgeAriaLabel(edge, nodeById(source), nodeById(target)),
       className: diffClassName(edge.diffStatus),
       zIndex: ZIndexes.Edge,
-      hidden: !visiblePredicate(edge),
+      hidden: hiddenNodeIds.has(source) || hiddenNodeIds.has(target) || !visiblePredicate(edge),
       deletable,
       data: {
         id: edge.id,

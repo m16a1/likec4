@@ -1,7 +1,7 @@
 import { type ViewsBuilder, Builder } from '@likec4/core/builder'
 import { describe, expect as viExpect, it } from 'vitest'
 import { materialize } from './base'
-import { deploymentView as deploymentViewOp, views as viewsOp } from './views'
+import { deploymentView as deploymentViewOp, elementView as elementViewOp, views as viewsOp } from './views'
 
 const builder = Builder
   .specification({
@@ -196,6 +196,21 @@ describe('view', () => {
     expect(
       view('index', { placement: 'ranked' }, $include('*')),
     ).toContain('placement ranked')
+  })
+
+  it('should print view filter rules', () => {
+    viExpect(
+      materialize(elementViewOp(), {
+        id: 'index',
+        rules: [
+          { include: [{ wildcard: true }] },
+          {
+            filter: 'External systems',
+            where: { tag: { eq: 'external' } },
+          },
+        ],
+      }),
+    ).toContain('filter \'External systems\' where tag is #external')
   })
 
   it('should print multiple element views', () => {

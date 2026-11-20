@@ -306,6 +306,12 @@ export function applyManualLayout<
       delete draft.routing
     }
 
+    if (autoLayouted.filters && autoLayouted.filters.length > 0) {
+      draft.filters = castDraft(autoLayouted.filters)
+    } else {
+      delete draft.filters
+    }
+
     if (isElementView(autoLayouted) && draft._type === 'element') {
       if (autoLayouted.placement) {
         draft.placement = autoLayouted.placement

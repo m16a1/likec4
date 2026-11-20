@@ -534,6 +534,36 @@ views {
 }
 ```
 
+## Interactive filters
+
+Add `filter` rules to a view to expose checkboxes in the top navigation panel:
+
+```likec4
+views {
+  view landscape {
+    include *
+
+    filter 'External systems' where tag is #external
+    filter 'Government systems' where tag is #government
+    filter 'On-premises systems' where tag is #on-premises
+  }
+}
+```
+
+Enabling a filter hides the matching elements, their nested children, and all relationships
+connected to them. Multiple filters are combined, so enabling several filters hides the union of
+their matches.
+
+The condition uses the same `where` syntax as `include` and `exclude` predicates, including
+`and`, `or`, `not`, kinds, and metadata:
+
+```likec4
+filter 'Critical components' where metadata.critical is true
+```
+
+Filters are inherited by views that use `extends`. They apply to the interactive diagram; static
+exports (`likec4 export`) render the view without filters applied.
+
 ## Groups
 
 It is possible to group elements in element views and deployment views, and this is rendered as a boundary around them:

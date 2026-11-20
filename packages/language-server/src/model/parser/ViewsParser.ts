@@ -169,6 +169,9 @@ export function ViewsParser<TBase extends WithPredicates & WithDeploymentView>(B
       if (ast.isViewRuleRank(astRule)) {
         return this.parseViewRuleRank(astRule)
       }
+      if (ast.isViewRuleFilter(astRule)) {
+        return this.parseViewRuleFilter(astRule)
+      }
       nonexhaustive(astRule)
     }
 

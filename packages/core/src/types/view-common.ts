@@ -3,6 +3,7 @@ import type { AnyAux } from './_aux'
 import type { _stage } from './const'
 
 import type { GlobalPredicateId, GlobalStyleID } from './global'
+import type { WhereOperator } from './operators'
 import type * as scalar from './scalar'
 import type {
   BorderStyle,
@@ -70,6 +71,15 @@ export interface ViewRuleRank<Expr> {
   rank: RankValue
 }
 
+export interface ViewRuleFilter<A extends AnyAux = AnyAux> {
+  filter: string
+  where: WhereOperator<A>
+}
+
+export function isViewRuleFilter<A extends AnyAux>(rule: object): rule is ViewRuleFilter<A> {
+  return 'filter' in rule && 'where' in rule
+}
+
 export type AutoLayoutDirection = 'TB' | 'BT' | 'LR' | 'RL'
 export function isAutoLayoutDirection(autoLayout: unknown): autoLayout is AutoLayoutDirection {
   return autoLayout === 'TB' || autoLayout === 'BT' || autoLayout === 'LR' || autoLayout === 'RL'
@@ -119,6 +129,10 @@ export interface BaseViewProperties<A extends AnyAux> extends aux.WithOptionalTa
    * Node placement, element views only. When absent, treat it as `surround`.
    */
   readonly placement?: ViewPlacement
+  /**
+   * Interactive filter rules defined in the view DSL.
+   */
+  readonly filters?: ReadonlyArray<ViewRuleFilter<A>>
   /**
    * Source file containing this view, relative to the project root.
    * Undefined if the view is auto-generated.

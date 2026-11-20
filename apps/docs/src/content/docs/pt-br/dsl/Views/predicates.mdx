@@ -534,6 +534,36 @@ views {
 }
 ```
 
+## Filtros interativos
+
+Adicione regras `filter` a uma view para exibir checkboxes no painel superior de navegação:
+
+```likec4
+views {
+  view landscape {
+    include *
+
+    filter 'Sistemas externos' where tag is #external
+    filter 'Sistemas governamentais' where tag is #government
+    filter 'On-premises' where tag is #on-premises
+  }
+}
+```
+
+Ao ativar um filtro, os elementos correspondentes, seus filhos aninhados e todas as relações
+conectadas a eles são ocultados. Vários filtros são combinados, então ativar vários oculta a união
+das correspondências.
+
+A condição usa a mesma sintaxe `where` dos predicados `include` e `exclude`, incluindo `and`,
+`or`, `not`, kinds e metadata:
+
+```likec4
+filter 'Componentes críticos' where metadata.critical is true
+```
+
+Filtros são herdados por views que usam `extends`. Eles se aplicam ao diagrama interativo; exports
+estáticos (`likec4 export`) renderizam a view sem os filtros aplicados.
+
 ## Grupos
 
 É possível agrupar elementos, e isso é renderizado como um limite ao redor deles:

@@ -636,6 +636,10 @@ export class LikeC4Formatter extends AbstractFormatter {
       const formatter = this.getNodeFormatter(node)
       formatter.keyword('where').append(FormattingOptions.oneSpace)
     }
+    this.on(node, ast.isViewRuleFilter, (_n, f) => {
+      f.keyword('filter').append(FormattingOptions.oneSpace)
+      f.keyword('where').surround(FormattingOptions.oneSpace)
+    })
   }
 
   protected formatWhereRelationExpression(node: AstNode) {

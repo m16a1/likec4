@@ -10,7 +10,9 @@ import {
   type ElementViewRule,
   type ModelGlobals,
   type ParsedElementView,
+  type ViewRuleFilter,
   isViewRuleAutoLayout,
+  isViewRuleFilter,
   isViewRuleGroup,
   isViewRulePredicate,
   isViewRuleRank,
@@ -326,6 +328,7 @@ export function computeElementView<A extends AnyAux>(
 
   const nodeNotations = buildElementNotations(nodes)
   const ranks = collectRankConstraints(rules, nodes)
+  const filters = collectViewFilters<A>(rules)
 
   return calcViewLayoutHash({
     ...withResolvedRouting(view, likec4model.$styles.defaults.view.routing),
@@ -348,7 +351,23 @@ export function computeElementView<A extends AnyAux>(
       },
     }),
     ...(ranks.length > 0 && { ranks }),
+    ...(filters.length > 0 && { filters }),
   })
+}
+
+function collectViewFilters<A extends AnyAux>(
+  rules: ReadonlyArray<object>,
+): ViewRuleFilter<A>[] {
+  const byTitle = new Map<string, ViewRuleFilter<A>>()
+  for (const rule of rules) {
+    if (isViewRuleFilter<A>(rule)) {
+      byTitle.set(rule.filter, {
+        filter: rule.filter,
+        where: rule.where,
+      })
+    }
+  }
+  return [...byTitle.values()]
 }
 
 function collectRankConstraints<A extends AnyAux>(

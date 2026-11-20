@@ -75,6 +75,14 @@ const _diagramMachine = machine.createMachine({
     'update.inputs': {
       actions: updateInputs(),
     },
+    'update.where': {
+      actions: [
+        assign(({ event }) => ({
+          where: event.where,
+        })),
+        raiseUpdateView(),
+      ],
+    },
     'update.view-bounds': {
       actions: assign(({ context, event }) => {
         return {

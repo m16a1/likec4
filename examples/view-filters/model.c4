@@ -1,0 +1,69 @@
+specification {
+  element actor
+  element system
+  element container
+
+  tag external
+  tag government
+  tag on-premises
+}
+
+model {
+  actor customer 'Customer'
+  actor auditor 'Government Auditor'
+
+  system corePlatform 'Core Platform' {
+    container api 'Public API'
+    container backoffice 'Back Office' {
+      metadata {
+        critical true
+      }
+    }
+    container billing 'Billing'
+
+    api -> backoffice 'serves'
+    backoffice -> billing 'invoices'
+  }
+
+  system dataPlatform 'Data Platform' {
+    container warehouse 'Warehouse'
+    container reporting 'Reporting'
+
+    warehouse -> reporting 'feeds'
+  }
+
+  system stripe 'Stripe' {
+    #external
+  }
+
+  system salesforce 'Salesforce' {
+    #external
+  }
+
+  system taxAuthority 'Tax Authority' {
+    #external, #government
+  }
+
+  system healthRegistry 'Health Registry' {
+    #government
+  }
+
+  system legacyErp 'Legacy ERP' {
+    #on-premises
+  }
+
+  system mainframe 'Mainframe' {
+    #on-premises
+  }
+
+  customer -> corePlatform.api 'uses'
+  auditor -> corePlatform.api 'reviews'
+  corePlatform.billing -> stripe 'charges cards'
+  corePlatform.backoffice -> salesforce 'syncs accounts'
+  corePlatform.billing -> taxAuthority 'reports VAT'
+  corePlatform.backoffice -> healthRegistry 'submits records'
+  corePlatform.backoffice -> legacyErp 'syncs orders'
+  corePlatform.backoffice -> mainframe 'reads policies'
+  corePlatform.api -> dataPlatform.reporting 'queries'
+  dataPlatform.warehouse -> legacyErp 'extracts'
+}

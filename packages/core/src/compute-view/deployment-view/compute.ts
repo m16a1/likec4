@@ -4,9 +4,11 @@ import type { AnyAux, DeploymentViewRule } from '../../types'
 import {
   type ComputedDeploymentView,
   type ParsedDeploymentView as DeploymentView,
+  type ViewRuleFilter,
   _stage,
   _type,
   isViewRuleAutoLayout,
+  isViewRuleFilter,
   isViewRuleGroup,
   isViewRulePredicate,
   RelationExpr,
@@ -222,6 +224,7 @@ export function computeDeploymentView<M extends AnyAux>(
   const autoLayoutRule = findLast(rules, isViewRuleAutoLayout)
 
   const elementNotations = buildElementNotations(nodes)
+  const filters = collectDeploymentViewFilters<M>(rules)
 
   return calcViewLayoutHash({
     ...withResolvedRouting(view, likec4model.$styles.defaults.view.routing),
@@ -250,5 +253,21 @@ export function computeDeploymentView<M extends AnyAux>(
         nodes: elementNotations,
       },
     }),
+    ...(filters.length > 0 && { filters }),
   })
+}
+
+function collectDeploymentViewFilters<A extends AnyAux>(
+  rules: ReadonlyArray<object>,
+): ViewRuleFilter<A>[] {
+  const byTitle = new Map<string, ViewRuleFilter<A>>()
+  for (const rule of rules) {
+    if (isViewRuleFilter<A>(rule)) {
+      byTitle.set(rule.filter, {
+        filter: rule.filter,
+        where: rule.where,
+      })
+    }
+  }
+  return [...byTitle.values()]
 }

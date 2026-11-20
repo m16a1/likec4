@@ -257,6 +257,7 @@ export type Events =
   }
   | { type: 'update.view-bounds'; bounds: BBox }
   | { type: 'update.inputs'; inputs: Partial<Omit<Input, 'view' | 'xystore' | 'dynamicViewVariant' | 'features'>> }
+  | { type: 'update.where'; where: WhereOperator | null }
   | { type: 'update.features'; features: EnabledFeatures }
   | ({ type: 'open.source' } & OpenSourceParams)
   | { type: 'open.nodeDetails'; target: NodeId | DetailsSubject; fromNode?: NodeId | undefined }

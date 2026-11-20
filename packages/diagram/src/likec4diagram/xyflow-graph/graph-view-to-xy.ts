@@ -6,6 +6,7 @@ import {
   type Fqn,
   type NodeId,
   type WhereOperator,
+  GroupElementKind,
   nonNullable,
   whereOperatorAsPredicate,
 } from '@likec4/core'
@@ -94,6 +95,17 @@ export function graphViewToXY(opts: {
   const radius = GraphNodeDiameter / 2
   // Only leaf elements are rendered - compound (and view-group) nodes are flattened away
   const isLeaf = (node: DiagramNode) => node.children.length === 0
+  const hiddenNodeIds = new Set<Fqn>()
+  const isNodeOrAncestorHidden = (node: DiagramNode): boolean => {
+    let cur: DiagramNode | undefined = node
+    while (cur) {
+      if (cur.kind !== GroupElementKind && !visiblePredicate(cur)) {
+        return true
+      }
+      cur = cur.parent ? nodeLookup.get(cur.parent) : undefined
+    }
+    return false
+  }
 
   for (const node of view.nodes) {
     if (!isLeaf(node)) {
@@ -109,6 +121,10 @@ export function graphViewToXY(opts: {
     const id = node.id as NodeId
     const centerX = node.x + node.width / 2
     const centerY = node.y + node.height / 2
+    const isHidden = isNodeOrAncestorHidden(node)
+    if (isHidden) {
+      hiddenNodeIds.add(node.id)
+    }
 
     xynodes.push(
       {
@@ -128,7 +144,7 @@ export function graphViewToXY(opts: {
         ariaLabel: nodeAriaLabel(node),
         initialWidth: GraphNodeDiameter,
         initialHeight: GraphNodeDiameter,
-        hidden: !visiblePredicate(node),
+        hidden: isHidden,
         data: {
           viewId: view.id,
           id: node.id,
@@ -183,7 +199,7 @@ export function graphViewToXY(opts: {
         target: edge.target,
         ariaLabel: edgeAriaLabel(edge, source, target),
         zIndex: ZIndexes.Edge,
-        hidden: !visiblePredicate(edge),
+        hidden: hiddenNodeIds.has(edge.source) || hiddenNodeIds.has(edge.target) || !visiblePredicate(edge),
         deletable: false,
         selectable: true,
         data: {

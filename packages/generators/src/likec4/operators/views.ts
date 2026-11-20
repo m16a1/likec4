@@ -32,7 +32,7 @@ import {
   text,
   zodOp,
 } from './base'
-import { expression } from './expressions'
+import { expression, whereOperator } from './expressions'
 import {
   colorProperty,
   descriptionProperty,
@@ -171,6 +171,15 @@ export const viewRuleRank = zodOp(schemas.views.viewRuleRank)(({ ctx: _ctx, exec
   throw new Error('not implemented')
 })
 
+export const viewRuleFilter = zodOp(schemas.views.viewRuleFilter)(
+  spaceBetween(
+    print('filter'),
+    property('filter', inlineText()),
+    print('where'),
+    property('where', whereOperator.noparse()),
+  ),
+)
+
 export const elementViewRule = zodOp(schemas.views.elementViewRule)(
   ({ ctx, exec }) => {
     if ('include' in ctx) {
@@ -184,6 +193,9 @@ export const elementViewRule = zodOp(schemas.views.elementViewRule)(
     }
     if ('rank' in ctx) {
       return exec(ctx, viewRuleRank.noparse())
+    }
+    if ('filter' in ctx) {
+      return exec(ctx, viewRuleFilter.noparse())
     }
     if ('direction' in ctx) {
       return exec(ctx, viewRuleAutoLayout.noparse())
@@ -250,6 +262,9 @@ export const deploymentViewRule = zodOp(schemas.views.deploymentViewRule)(
     }
     if ('groupRules' in ctx) {
       return exec(ctx, viewRuleGroup.noparse())
+    }
+    if ('filter' in ctx) {
+      return exec(ctx, viewRuleFilter.noparse())
     }
     if ('direction' in ctx) {
       return exec(ctx, viewRuleAutoLayout.noparse())

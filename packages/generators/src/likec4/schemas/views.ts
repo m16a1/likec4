@@ -84,6 +84,12 @@ export const viewRuleRank = z
   })
   .transform(v => v as ViewRuleRank<FqnExpr>)
 
+export const viewRuleFilter = z
+  .object({
+    filter: z.string(),
+    where: schemas.whereOperator,
+  })
+
 // Manually typed due to recursive z.lazy schema
 export namespace ZViewRuleGroup {
   export type In = {
@@ -141,6 +147,7 @@ export const elementViewRule = z
     viewRuleGlobalStyle,
     viewRuleGlobalPredicate,
     viewRuleRank,
+    viewRuleFilter,
     viewRuleGroup,
   ])
 
@@ -193,6 +200,7 @@ export const deploymentViewRule = z
     viewRuleGlobalStyle,
     viewRuleGlobalPredicate,
     deploymentViewRuleIncludeAncestors,
+    viewRuleFilter,
     viewRuleGroup,
   ])
 
