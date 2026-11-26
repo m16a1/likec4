@@ -129,10 +129,14 @@ export class DefaultLikeC4Views extends ADisposable implements LikeC4Views {
 
   private ModelBuilder: LikeC4ModelBuilder
 
-  constructor(private services: LikeC4Services) {
+  /**
+   * @param storage - optional external storage for the layout cache,
+   *   for example an on-disk storage. Defaults to an in-memory storage.
+   */
+  constructor(private services: LikeC4Services, storage?: Storage) {
     super()
     this.ModelBuilder = services.likec4.ModelBuilder
-    this.#storage = createStorage()
+    this.#storage = storage ?? createStorage()
 
     this.onDispose(
       this.#storage,
@@ -215,6 +219,7 @@ export class DefaultLikeC4Views extends ADisposable implements LikeC4Views {
           logger.warn(`Fail layout view ${task.view.id}`, { error })
         },
       })
+      await projectScope.flush()
       logger.debug` <- layouted ${tasks.length} views in ${m0.pretty}`
     }
     if (cancelToken) {
@@ -422,12 +427,14 @@ export class DefaultLikeC4Views extends ADisposable implements LikeC4Views {
 class ProjectStorage {
   #logger: Logger
 
-  #storage: Storage<GraphvizOut>
+  #storage: Storage
   #layouter: (task: LayoutTaskParams) => Promise<GraphvizOut>
+  #pendingWrites = new Set<Promise<void>>()
+  #reportedErrors = new Set<ViewId>()
 
   constructor(opts: {
     projectId: ProjectId
-    storage: Storage<any>
+    storage: Storage
     layouter: (task: LayoutTaskParams) => Promise<GraphvizOut>
   }) {
     this.#logger = viewsLogger.getChild(opts.projectId)
@@ -436,8 +443,7 @@ class ProjectStorage {
   }
 
   async get(task: LayoutTaskParams): Promise<GraphvizOut | undefined> {
-    const key = cacheKey(task)
-    const cached = await this.#storage.get(key)
+    const cached = await this.#getCached(task)
     if (cached) {
       this.#logger.trace`cache hit for ${task.view.id}`
       return mergeWithCachedLayout(task.view, cached)
@@ -448,7 +454,7 @@ class ProjectStorage {
 
   async getOrExecute(task: LayoutTaskParams): Promise<GraphvizOut> {
     const key = cacheKey(task)
-    const cached = await this.#storage.get(key)
+    const cached = await this.#getCached(task)
     if (cached) {
       this.#logger.trace`cache hit for ${task.view.id}`
       return mergeWithCachedLayout(task.view, cached)
@@ -465,22 +471,31 @@ class ProjectStorage {
   remember = <A extends GraphvizOut | undefined>(task: LayoutTaskParams, result: A): A => {
     const key = cacheKey(task)
     if (result) {
-      this.#storage.set(key, result).catch(err => {
+      const write = this.#storage.set(key, result).catch(err => {
         this.#logger.error(err)
       })
+      this.#pendingWrites.add(write)
+      void write.finally(() => this.#pendingWrites.delete(write))
       this.resetViewError(task.view)
     }
     return result
   }
 
+  /**
+   * Waits for the writes scheduled by {@link remember} to complete.
+   */
+  async flush(): Promise<void> {
+    while (this.#pendingWrites.size > 0) {
+      await Promise.all(this.#pendingWrites)
+    }
+  }
+
   reportViewError(view: ComputedView, execIfNotReported: () => unknown) {
-    const key = `error:${view.id}`
-    this.#storage.has(key).then(yes => {
-      if (!yes) {
-        this.#storage.set<any>(key, 'true')
-        execIfNotReported()
-      }
-    })
+    if (this.#reportedErrors.has(view.id)) {
+      return
+    }
+    this.#reportedErrors.add(view.id)
+    execIfNotReported()
   }
 
   /**
@@ -501,17 +516,58 @@ class ProjectStorage {
    */
   clearAll() {
     this.#logger.trace`clear caches`
-    this.#storage.clear()
+    this.#reportedErrors.clear()
+    void this.#storage.clear().catch(err => {
+      this.#logger.error(err)
+    })
+  }
+
+  async #getCached(task: LayoutTaskParams): Promise<GraphvizOut | undefined> {
+    const key = cacheKey(task)
+    let cached: unknown
+    try {
+      cached = await this.#storage.get(key)
+    } catch (err) {
+      this.#logger.warn(`Failed to read cached layout for ${task.view.id}`, { err })
+      return undefined
+    }
+    if (cached == null) {
+      return undefined
+    }
+    if (!isGraphvizOut(cached)) {
+      this.#logger.warn(`Ignoring invalid cached layout for ${task.view.id}`)
+      await this.#storage.remove(key).catch(() => {})
+      return undefined
+    }
+    return cached
   }
 
   private resetViewError(view: ComputedView | ViewId) {
-    const id = typeof view === 'string' ? view : view.id
-    this.#storage.del(`error:${id}`)
+    this.#reportedErrors.delete(typeof view === 'string' ? view : view.id)
   }
 }
 
 function cacheKey(task: LayoutTaskParams) {
   return `v:${task.view.id}:${task.view.hash}:${task.styles.fingerprint}`
+}
+
+function isGraphvizOut(value: unknown): value is GraphvizOut {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  if (!('dot' in value) || typeof value.dot !== 'string') {
+    return false
+  }
+  if (!('diagram' in value)) {
+    return false
+  }
+  const diagram = value.diagram
+  return typeof diagram === 'object'
+    && diagram !== null
+    && 'nodes' in diagram
+    && Array.isArray(diagram.nodes)
+    && 'edges' in diagram
+    && Array.isArray(diagram.edges)
 }
 
 function mergeWithCachedLayout(current: ComputedView, cached: GraphvizOut): GraphvizOut {

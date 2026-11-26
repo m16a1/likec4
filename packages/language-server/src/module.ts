@@ -216,7 +216,7 @@ export function createLikeC4Module(
           graphviz: services.likec4.Graphviz,
         })
       },
-      Views: bind(DefaultLikeC4Views),
+      Views: (services) => new DefaultLikeC4Views(services, context.viewsStorage),
       DeploymentsIndex: bind(DeploymentsIndex),
       ModelChanges: bind(LikeC4ModelChanges),
       FqnIndex: bind(FqnIndex),

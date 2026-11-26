@@ -183,6 +183,7 @@ likec4 build -o ./dist
 | `--title, -t`                | Título base das páginas da aplicação (padrão: "LikeC4")                                                          |
 | `--output-single-file`       | Gera um único arquivo HTML independente                                                                          |
 | `--public, --public-dir`     | Diretório cujos arquivos são copiados sem alterações para a saída (Vite [`publicDir`](https://vite.dev/guide/assets#the-public-directory)); também preservado com `--output-single-file` |
+| `--cache [dir]`              | Armazena em disco os layouts calculados para acelerar builds posteriores (padrão: `node_modules/.cache/likec4`)  |
 | `--theme`                    | Esquema de cores padrão da aplicação, `light` ou `dark` (padrão: segue a preferência do sistema)                 |
 | `--customization`            | Arquivo com [personalização da interface](/tooling/customization/) (experimental)                           |
 | `--app-config`               | Caminho da [configuração da aplicação](/tooling/app-config/); `--no-app-config` para ignorá-la (experimental) |

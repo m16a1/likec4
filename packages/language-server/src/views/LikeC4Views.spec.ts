@@ -1,8 +1,10 @@
 import type { ViewId } from '@likec4/core'
 import { deepEqual } from 'fast-equals'
 import { indexBy } from 'remeda'
+import { createStorage } from 'unstorage'
 import { describe } from 'vitest'
 import { testFileScope as it } from '../test'
+import type { GraphvizOut } from './LikeC4Views'
 
 describe('LikeC4Views', () => {
   it('diagrams returns cached result', async ({ expect, t }) => {
@@ -110,5 +112,42 @@ describe('LikeC4Views', () => {
 
     const after = await t.services.likec4.Views.layoutView({ viewId: 'index' as ViewId })
     expect(after?.dot).toContain('likec4_rankBlocks=1')
+  })
+
+  it('reuses layouts from an external storage', async ({ expect, create }) => {
+    const source = `
+      specification {
+        element component
+      }
+      model {
+        component sys1
+        component sys2
+        sys1 -> sys2
+      }
+      views {
+        view index {
+          include *
+        }
+      }
+    `
+    const storage = createStorage()
+
+    const first = create({ context: { viewsStorage: storage } })
+    await first.validate(source)
+    const [layout] = await first.services.likec4.Views.layoutAllViews()
+    expect(layout).toBeDefined()
+
+    const keys = await storage.getKeys()
+    expect(keys).toHaveLength(1)
+    const key = keys[0]!
+    const cached = await storage.get<GraphvizOut>(key)
+    expect(cached).toBeDefined()
+    cached!.diagram.nodes[0]!.x = 12345
+    await storage.set(key, cached)
+
+    const second = create({ context: { viewsStorage: storage } })
+    await second.validate(source)
+    const [fromCache] = await second.services.likec4.Views.layoutAllViews()
+    expect(fromCache!.diagram.nodes[0]!.x).toBe(12345)
   })
 })

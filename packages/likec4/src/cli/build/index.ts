@@ -14,14 +14,17 @@ import { createLikeC4Logger } from '../../logger'
 import { relativeToCwd } from '../../vite/utils'
 import { viteBuild } from '../../vite/vite-build'
 import { notifyAvailableUpdate } from '../check-update/utils'
+import { pkg } from '../conf'
 import { ensureReact } from '../ensure-libs'
 import {
   appConfig,
   base,
+  cache,
   customization,
   outputSingleFile,
   path,
   publicDir,
+  resolveViewsCacheDir,
   theme,
   title,
   useDotBin,
@@ -61,6 +64,7 @@ const buildCmd = (yargs: yargs.Argv) => {
           .option('customization', customization)
           .option('output-single-file', outputSingleFile)
           .option('public', publicDir)
+          .option('cache', cache)
           .option('theme', theme)
           .example(
             `${k.green('$0 build -o ./build ./src')}`,
@@ -73,6 +77,10 @@ const buildCmd = (yargs: yargs.Argv) => {
           .example(
             `${k.green('$0 build --public ./assets -o ./build ./src')}`,
             k.gray('Copy files from \'assets\' to the output directory as-is'),
+          )
+          .example(
+            `${k.green('$0 build --cache')}`,
+            k.gray('Build the static site and cache computed layouts on disk'),
           ),
       handler: async (args) => {
         await notifyAvailableUpdate()
@@ -99,9 +107,12 @@ const buildCmd = (yargs: yargs.Argv) => {
           logger.info(`${k.cyan('app config')} ${k.dim(relativeToCwd(config.configFile))}`)
         }
 
+        const viewsCacheDir = resolveViewsCacheDir(args.cache, config.workspace, pkg.version)
+
         await using languageServices = await fromWorkspace(config.workspace, {
           graphviz: config.graphviz,
           watch: false,
+          viewsCacheDir,
         })
 
         const outputDir = config.build.outDir ?? resolve(languageServices.workspace, 'dist')

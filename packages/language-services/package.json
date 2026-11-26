@@ -84,6 +84,7 @@
     "tinyrainbow": "catalog:utils",
     "type-fest": "catalog:externals",
     "ufo": "catalog:utils",
+    "unstorage": "catalog:utils",
     "vscode-languageserver-types": "catalog:vscode",
     "vscode-uri": "catalog:vscode"
   },

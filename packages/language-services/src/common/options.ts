@@ -66,4 +66,12 @@ export type FromWorkspaceOptions = InitOptions & {
    * @default false
    */
   watch?: boolean
+
+  /**
+   * Directory for a persistent layout cache.
+   * When set, computed view layouts are stored on disk and reused by later runs.
+   * Layout format version and Graphviz mode are appended to the directory.
+   * @default undefined (layouts are cached in memory only)
+   */
+  viewsCacheDir?: string | undefined
 }

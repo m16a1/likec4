@@ -9,7 +9,10 @@ import { GraphvizWasmAdapter } from '@likec4/layouts'
 import { GraphvizBinaryAdapter } from '@likec4/layouts/graphviz/binary'
 import { rootLogger } from '@likec4/log'
 import defu from 'defu'
+import { resolve } from 'node:path'
 import k from 'tinyrainbow'
+import { createStorage } from 'unstorage'
+import fsDriver from 'unstorage/drivers/fs'
 import type { LikeC4Langium } from '../common/LikeC4'
 
 export type CreateLanguageServiceOptions = {
@@ -36,6 +39,14 @@ export type CreateLanguageServiceOptions = {
    * @default 'wasm'
    */
   graphviz?: 'wasm' | 'binary'
+
+  /**
+   * Directory for a persistent layout cache.
+   * When set, computed view layouts are stored on disk and reused by later runs.
+   * Layout format version and Graphviz mode are appended to the directory.
+   * @default undefined (layouts are cached in memory only)
+   */
+  viewsCacheDir?: string | undefined
 }
 
 export function createLanguageServices(
@@ -57,6 +68,19 @@ export function createLanguageServices(
 
   logger.info(`${k.dim('layout')} ${useDotBin ? 'binary' : 'wasm'}`)
 
+  const viewsStorage = options.viewsCacheDir
+    ? createStorage({
+      driver: fsDriver({
+        // Namespaced by cache format and layout engine, so switching either never reuses stale layouts
+        base: resolve(options.viewsCacheDir, 'v1', useDotBin ? 'binary' : 'wasm'),
+      }),
+    })
+    : undefined
+
+  if (viewsStorage) {
+    logger.info(`${k.dim('layout cache:')} ${options.viewsCacheDir}`)
+  }
+
   const langium = createCustomLanguageServices(
     {
       ...options.useFileSystem
@@ -69,6 +93,7 @@ export function createLanguageServices(
           ...NoLikeC4ManualLayouts,
         },
       ...WithGraphviz(useDotBin ? new GraphvizBinaryAdapter() : new GraphvizWasmAdapter()),
+      ...(viewsStorage ? { viewsStorage } : {}),
     },
   )
   return langium

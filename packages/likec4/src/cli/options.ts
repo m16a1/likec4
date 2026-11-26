@@ -118,6 +118,30 @@ export const publicDir = {
   coerce: resolve,
 } as const satisfies Options
 
+export const cache = {
+  string: true,
+  desc:
+    'cache computed layouts on disk for faster subsequent builds, optionally in <dir> (default: node_modules/.cache/likec4)',
+} as const satisfies Options
+
+/**
+ * Resolves the directory for the persistent layout cache.
+ *
+ * `--cache` without a value uses `node_modules/.cache/likec4` in the workspace.
+ * The LikeC4 version is appended so upgrades do not reuse stale layouts.
+ */
+export function resolveViewsCacheDir(
+  cache: string | undefined,
+  workspace: string,
+  version: string,
+): string | undefined {
+  if (cache === undefined) {
+    return undefined
+  }
+  const base = cache ? resolve(cache) : resolve(workspace, 'node_modules', '.cache', 'likec4')
+  return resolve(base, version)
+}
+
 export const allowedHost = {
   array: true,
   string: true,
