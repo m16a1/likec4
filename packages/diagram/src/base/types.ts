@@ -33,6 +33,10 @@ export type BaseEdgeData = {
    * 'immediate' means that the edge is dimmed without delay
    */
   dimmed?: Base.Dimmed
+  /**
+   * Overrides the edge stroke color when edges are colorized.
+   */
+  colorizedStroke?: string | undefined
 }
 
 // We do these aliases to ensure bundled type definitions are correct (see packages/likec4/react)

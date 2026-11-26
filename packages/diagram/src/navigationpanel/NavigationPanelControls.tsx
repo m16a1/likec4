@@ -8,6 +8,7 @@ import { useOptionalCurrentViewModel } from '../hooks/useCurrentViewModel'
 import { selectDiagramSnapshot, useDiagramSelector } from '../hooks/useDiagram'
 import { isComparingLayouts } from '../likec4diagram/state/machine.setup'
 import {
+  ColorizeControl,
   FilterControl,
   LayoutWarning,
   LogoButton,
@@ -42,6 +43,7 @@ const selectViewData = selectDiagramSnapshot(snapshot => {
   return ({
     viewId: s.view.id,
     linksCount: s.view.links?.length ?? 0,
+    edgesCount: s.view.edges.length,
     viewTitle: (s.view.title && extractViewTitleFromPath(s.view.title)) ?? 'Untitled View',
     isDynamicView: s.view._type === 'dynamic',
     isElementView: s.view._type === 'element',
@@ -74,6 +76,7 @@ export const NavigationPanelControls = memo(() => {
     isElementView,
     elementViewVariant,
     linksCount,
+    edgesCount,
     isComparing,
   } = useDiagramSelector(selectViewData)
 
@@ -110,6 +113,7 @@ export const NavigationPanelControls = memo(() => {
             disabled={isComparing || isEditing} />
         )}
         {!isComparing && <FilterControl key={`filter-control-${viewId}`} />}
+        {!isComparing && edgesCount > 0 && <ColorizeControl key="colorize-edges" />}
         {enableSearch && !isComparing && <SearchControl key="search-control" />}
         <LayoutWarning key="outdated-manual-layout-warning" />
       </m.div>

@@ -7,11 +7,14 @@ import type { UndefinedOnPartialDeep } from 'type-fest'
 import type { BaseEdgePropsWithData } from '../../base/types'
 
 type Data = UndefinedOnPartialDeep<
-  Pick<
+  & Pick<
     DiagramEdge,
     | 'dir'
     | 'color'
   >
+  & {
+    colorizedStroke?: string | undefined
+  }
 >
 
 type EdgeContainerProps = PropsWithChildren<
@@ -30,6 +33,7 @@ export function EdgeContainer({
   selected = false,
   data: {
     color,
+    colorizedStroke,
     hovered: isHovered = false,
     active: isActive = false,
     dimmed: isDimmed = false,
@@ -41,6 +45,13 @@ export function EdgeContainer({
   ...rest
 }: EdgeContainerProps) {
   animated = animated || isActive
+  const edgeStyle = colorizedStroke
+    ? {
+      ...style,
+      ['--xy-edge-stroke' as string]: colorizedStroke,
+      ['--xy-edge-stroke-selected' as string]: colorizedStroke,
+    }
+    : style
   const props = {
     className: cx(
       className,
@@ -65,7 +76,7 @@ export function EdgeContainer({
   }
   if (component === 'svg') {
     return (
-      <svg style={style} {...props}>
+      <svg style={edgeStyle} {...props}>
         {children}
       </svg>
     )
@@ -73,7 +84,7 @@ export function EdgeContainer({
   invariant(component === 'g', 'EdgeContainer: component must be "g" or "svg"')
 
   return (
-    <g style={style} {...props}>
+    <g style={edgeStyle} {...props}>
       {children}
     </g>
   )

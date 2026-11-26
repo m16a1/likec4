@@ -7,13 +7,14 @@ import { assertEvent } from 'xstate'
 import { enqueueActions } from 'xstate/actions'
 import { roundDpr } from '../../utils/roundDpr'
 import { parsePaddings } from '../../utils/xyflow'
+import { colorizeEdges } from '../colorize-edges'
 import { convertToXYFlow } from '../convert-to-xyflow'
 import { mergeXYNodesEdges } from './assign'
 import {
   cancelFitDiagram,
   raiseSetViewport,
 } from './machine.actions'
-import { machine, targetState, to } from './machine.setup'
+import { isColorizeEdgesEnabled, machine, targetState, to } from './machine.setup'
 import { calcViewportForBounds, findCorrespondingNode, findNodeByModelFqn, nodeRef, viewBounds } from './utils'
 
 /**
@@ -110,6 +111,11 @@ export const navigating = machine.createStateConfig({
           }),
         }
 
+        const xyData = {
+          ...eventWithXYData,
+          xyedges: colorizeEdges(eventWithXYData.xyedges, isColorizeEdgesEnabled(context)),
+        }
+
         invariant(xyflow, 'xyflow is not initialized')
 
         const currentViewport = xyflow.getViewport()
@@ -146,7 +152,7 @@ export const navigating = machine.createStateConfig({
         }
 
         const fromHistory = history[currentIndex]
-        if (fromHistory && fromHistory.viewId === eventWithXYData.view.id) {
+        if (fromHistory && fromHistory.viewId === xyData.view.id) {
           const {
             focusedNode: wasFocused,
             activeWalkthrough: wasActiveWalkthrough,
@@ -154,9 +160,9 @@ export const navigating = machine.createStateConfig({
           } = fromHistory
 
           const nextCtx = {
-            ...mergeXYNodesEdges(context, eventWithXYData),
+            ...mergeXYNodesEdges(context, xyData),
             dynamicViewVariant: fromHistory.dynamicViewVariant
-              ?? (eventWithXYData.view._type === 'dynamic' ? eventWithXYData.view.variant : undefined)
+              ?? (xyData.view._type === 'dynamic' ? xyData.view.variant : undefined)
               ?? context.dynamicViewVariant,
             elementViewVariant: 'diagram',
             viewportChangedManually: viewportBefore?.wasChangedManually ?? fromHistory.viewportChangedManually,
@@ -186,13 +192,13 @@ export const navigating = machine.createStateConfig({
           return
         }
 
-        const nextBounds = viewBounds(context, eventWithXYData.view)
+        const nextBounds = viewBounds(context, xyData.view)
         const nextViewport = calcViewportForBounds(
           context,
           nextBounds,
         )
 
-        const { fromNode, toNode } = findCorrespondingNode(context, eventWithXYData)
+        const { fromNode, toNode } = findCorrespondingNode(context, xyData)
         if (fromNode && toNode) {
           const elFrom = xyflow.getInternalNode(fromNode.id)!
           const fromPoint = xyflow.flowToScreenPosition({
@@ -258,15 +264,15 @@ export const navigating = machine.createStateConfig({
         // Check if we need to focus on a specific element after navigation (from search)
         const focusOnElement = context.lastOnNavigate?.focusOnElement
         const nodeToFocus = isTruthy(focusOnElement)
-          ? findNodeByModelFqn(eventWithXYData.xynodes, focusOnElement)
+          ? findNodeByModelFqn(xyData.xynodes, focusOnElement)
           : null
 
         enqueue.assign({
-          ...mergeXYNodesEdges(context, eventWithXYData),
+          ...mergeXYNodesEdges(context, xyData),
           viewportChangedManually: false,
           lastOnNavigate: null,
-          dynamicViewVariant: eventWithXYData.view._type === 'dynamic'
-            ? eventWithXYData.view.variant
+          dynamicViewVariant: xyData.view._type === 'dynamic'
+            ? xyData.view.variant
             : context.dynamicViewVariant,
           elementViewVariant: 'diagram',
           navigationHistory: {

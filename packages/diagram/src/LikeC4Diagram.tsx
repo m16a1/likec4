@@ -190,6 +190,7 @@ export const LikeC4Diagram = customizable('LikeC4Diagram')(<A extends t.Any = t.
                 enableElementTags: enableElementTags && hasLikeC4Model,
                 enableCompareWithLatest: enableCompareWithLatest,
                 enableNotes,
+                enableColorizeEdges: false,
               }}
             >
               <DiagramEventHandlers

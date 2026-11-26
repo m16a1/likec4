@@ -30,13 +30,12 @@ const FeatureNames = [
    */
   'Vscode',
   'ElementTags',
+  'ColorizeEdges',
 ] as const
 export type FeatureName = typeof FeatureNames[number]
 
 // Features that can be toggled on/off at runtime in diagram context
-export type TogglableFeature =
-  & 'ReadOnly'
-  & FeatureName
+export type TogglableFeature = 'ReadOnly' | 'ColorizeEdges'
 
 export type EnabledFeatures = {
   [P in `enable${FeatureName}`]: boolean
@@ -64,6 +63,7 @@ export const DefaultFeatures: EnabledFeatures = {
   enableVscode: false,
   enableElementTags: false,
   enableNotes: false,
+  enableColorizeEdges: false,
 }
 const DiagramFeaturesContext = createContext<EnabledFeatures>(DefaultFeatures)
 

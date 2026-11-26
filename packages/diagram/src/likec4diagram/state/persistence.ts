@@ -1,19 +1,29 @@
 import { isBoolean } from 'remeda'
-import type { EnabledFeatures, TogglableFeature } from '../../context/DiagramFeatures'
+import type { TogglableFeature } from '../../context/DiagramFeatures'
 
-type PersistedToggledFeatures = Partial<Pick<EnabledFeatures, `enable${TogglableFeature}`>>
+type PersistedToggledFeatures = Partial<Record<`enable${TogglableFeature}`, boolean>>
 
 const key = `likec4:diagram:toggledFeatures`
+
+const togglableKeys = ['enableReadOnly', 'enableColorizeEdges'] as const
 
 /**
  * Picks only togglable features with boolean values
  * (ignores unknown keys, e.g. persisted by previous versions)
  */
 function pickTogglable(value: unknown): PersistedToggledFeatures {
-  if (typeof value !== 'object' || value === null || !('enableReadOnly' in value)) {
+  if (typeof value !== 'object' || value === null) {
     return {}
   }
-  return isBoolean(value.enableReadOnly) ? { enableReadOnly: value.enableReadOnly } : {}
+  const record = value as Record<string, unknown>
+  const result: PersistedToggledFeatures = {}
+  for (const key of togglableKeys) {
+    const feature = record[key]
+    if (isBoolean(feature)) {
+      result[key] = feature
+    }
+  }
+  return result
 }
 
 export const DiagramToggledFeaturesPersistence = {

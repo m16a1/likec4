@@ -355,7 +355,15 @@ const isReadOnlyContext = (context: Context, isComparing: boolean): boolean =>
  */
 export const deriveToggledFeatures = (snapshot: DiagramSnapshotLike): Required<ToggledFeatures> => ({
   enableReadOnly: isReadOnlyContext(snapshot.context, isComparingLayouts(snapshot)),
+  enableColorizeEdges: snapshot.context.toggledFeatures.enableColorizeEdges
+    ?? snapshot.context.features.enableColorizeEdges,
 })
+
+/**
+ * Returns true when edges should be colorized, taking runtime toggles into account.
+ */
+export const isColorizeEdgesEnabled = (context: Context): boolean =>
+  context.toggledFeatures.enableColorizeEdges ?? context.features.enableColorizeEdges
 
 /**
  * Returns true if comparing layouts is possible:

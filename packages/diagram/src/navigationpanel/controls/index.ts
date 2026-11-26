@@ -1,3 +1,4 @@
+export { ColorizeControl } from './ColorizeControl'
 export { FilterControl } from './FilterControl'
 export { LayoutWarning } from './LayoutWarning'
 export { LogoButton } from './LogoButton'

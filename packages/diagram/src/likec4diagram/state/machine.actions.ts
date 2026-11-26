@@ -38,6 +38,7 @@ import { Base } from '../../base'
 import type { OpenSourceParams } from '../../LikeC4Diagram.props'
 import { type DetailsSubject, detailsSubject } from '../../overlays/element-details/subject'
 import { viewRouting } from '../../utils/view-routing'
+import { colorizeEdges } from '../colorize-edges'
 import { convertToXYFlow } from '../convert-to-xyflow'
 import type { Types } from '../types'
 import { createLayoutConstraints } from '../useLayoutConstraints'
@@ -48,7 +49,7 @@ import {
   resetEdgeControlPoints,
 } from './assign'
 import { cancelFitDiagram, raiseFitDiagram, setViewport, setViewportCenter } from './machine.actions.layout'
-import { type Context, type Events, machine } from './machine.setup'
+import { type Context, type Events, isColorizeEdgesEnabled, machine } from './machine.setup'
 import {
   findDiagramEdge,
   findDiagramNode,
@@ -234,7 +235,10 @@ export const assignXYDataFromView = (view?: DiagramView) =>
       })
     }
 
-    const update = mergeXYNodesEdges(context, xydata)
+    const update = mergeXYNodesEdges(context, {
+      ...xydata,
+      xyedges: colorizeEdges(xydata.xyedges, isColorizeEdgesEnabled(context)),
+    })
 
     let { lastClickedNode, focusedNode, activeWalkthrough } = context
     if (lastClickedNode || focusedNode || activeWalkthrough) {
@@ -589,11 +593,16 @@ export const assignToggledFeatures = () =>
       context.features[feature]
     const nextValue = event.forceValue ?? !currentValue
 
+    const nextToggledFeatures = {
+      ...context.toggledFeatures,
+      [feature]: nextValue,
+    }
+
     return {
-      toggledFeatures: {
-        ...context.toggledFeatures,
-        [feature]: nextValue,
-      },
+      toggledFeatures: nextToggledFeatures,
+      ...(feature === 'enableColorizeEdges' && {
+        xyedges: colorizeEdges(context.xyedges, nextValue),
+      }),
     }
   })
 
