@@ -72,7 +72,7 @@ export function createLanguageServices(
     ? createStorage({
       driver: fsDriver({
         // Namespaced by cache format and layout engine, so switching either never reuses stale layouts
-        base: resolve(options.viewsCacheDir, 'v1', useDotBin ? 'binary' : 'wasm'),
+        base: resolve(options.viewsCacheDir, 'v2', useDotBin ? 'binary' : 'wasm'),
       }),
     })
     : undefined

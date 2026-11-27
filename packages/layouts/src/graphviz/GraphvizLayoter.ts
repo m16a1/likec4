@@ -22,6 +22,7 @@ import { GraphClusterSpace } from './DotPrinter'
 import { DynamicViewPrinter } from './DynamicViewPrinter'
 import { ElementViewPrinter } from './ElementViewPrinter'
 import { parseGraphvizJson, parseGraphvizJsonOfProjectsView } from './GraphvizParser'
+import { hideObstructedEdgeLabels } from './place-edge-label'
 import { ProjectsViewPrinter } from './ProjectsViewPrinter'
 import type { DotSource } from './types'
 import type { GraphvizJson } from './types-dot'
@@ -152,6 +153,15 @@ export class GraphvizLayouter implements Disposable {
         diagram = surroundLayout(diagram, this.surroundOptions) ?? diagram
       }
 
+      // Hide labels only after the final geometry is known, because `surround` can make
+      // more space for labels than the raw Graphviz layout.
+      if (!isDynamicView(diagram)) {
+        diagram = {
+          ...diagram,
+          edges: hideObstructedEdgeLabels(diagram.edges, diagram.nodes),
+        }
+      }
+
       dot = normalizeDot(dot)
 
       logger.trace`layouting view ${params.view.id} done`
@@ -180,6 +190,11 @@ export class GraphvizLayouter implements Disposable {
             sequenceLayout: calcSequenceLayout(diagram),
           } satisfies Partial<LayoutedDynamicView<A>>,
         )
+      } else {
+        diagram = {
+          ...diagram,
+          edges: hideObstructedEdgeLabels(diagram.edges, diagram.nodes),
+        }
       }
       dot = normalizeDot(dot)
       logger.trace`layouting view ${view.id} done`
@@ -229,6 +244,10 @@ export class GraphvizLayouter implements Disposable {
     }
     const json = await this.dotToJson(dot)
     logger.debug`layouting ${'projects overview'}`
-    return parseGraphvizJsonOfProjectsView(json, view)
+    const diagram = parseGraphvizJsonOfProjectsView(json, view)
+    return {
+      ...diagram,
+      edges: hideObstructedEdgeLabels(diagram.edges, diagram.nodes),
+    }
   }
 }

@@ -1,7 +1,7 @@
 import { BBox } from '@likec4/core/geometry'
 import type { DiagramEdge, EdgeId, NodeId, NonEmptyArray, Point } from '@likec4/core/types'
 import { describe, expect, it } from 'vitest'
-import { placeEdgeLabels } from './place-edge-label'
+import { hideObstructedEdgeLabels, placeEdgeLabels } from './place-edge-label'
 
 const node = (x: number, y: number, children: NodeId[] = []) => ({ x, y, width: 100, height: 60, children })
 const label = { width: 40, height: 16 }
@@ -72,5 +72,49 @@ describe('placeEdgeLabels', () => {
     compound.height = 1000
     const edge = { points: lShaped, labelBBox: { x: 0, y: 0, ...label } }
     expect(placeEdgeLabel(edge, [compound]).labelBBox).toEqual({ x: 304, y: 222, ...label })
+  })
+})
+
+describe('hideObstructedEdgeLabels', () => {
+  const straight = [[0, 100], [100, 100], [300, 100], [400, 100]] as NonEmptyArray<Point>
+  const clear = { x: 180, y: 76, width: 40, height: 16 }
+
+  it('keeps a label that covers nothing', () => {
+    const edge = { id: 'edge' as EdgeId, points: straight, labelBBox: clear }
+    expect(hideObstructedEdgeLabels([edge], [])[0]!.labelBBox).toEqual(clear)
+  })
+
+  it('hides a label that covers a leaf node', () => {
+    const edge = { id: 'edge' as EdgeId, points: straight, labelBBox: clear }
+    const covered = node(170, 60)
+    expect(hideObstructedEdgeLabels([edge], [covered])[0]!.labelBBox).toBeNull()
+  })
+
+  it('ignores compound nodes', () => {
+    const edge = { id: 'edge' as EdgeId, points: straight, labelBBox: clear }
+    const compound = node(0, 0, ['child' as NodeId])
+    expect(hideObstructedEdgeLabels([edge], [compound])[0]!.labelBBox).toEqual(clear)
+  })
+
+  it('hides a label that covers the route of another relationship', () => {
+    const edge = { id: 'edge' as EdgeId, points: straight, labelBBox: clear }
+    const crossing = {
+      id: 'crossing' as EdgeId,
+      points: [[200, 0], [200, 100], [200, 200], [200, 300]] as NonEmptyArray<Point>,
+      labelBBox: null,
+    }
+    expect(hideObstructedEdgeLabels([edge, crossing], [])[0]!.labelBBox).toBeNull()
+  })
+
+  it('does not hide a label because of its own route', () => {
+    const edge = { id: 'edge' as EdgeId, points: straight, labelBBox: { x: 180, y: 92, ...label } }
+    expect(hideObstructedEdgeLabels([edge], [])[0]!.labelBBox).toEqual({ x: 180, y: 92, ...label })
+  })
+
+  it('hides a label that cannot be placed clear of a node', () => {
+    const wall = { ...node(0, 0), width: 400, height: 200 }
+    const edge = { id: 'edge' as EdgeId, points: straight, labelBBox: clear }
+    const placed = placeEdgeLabels([edge], [wall])
+    expect(hideObstructedEdgeLabels(placed, [wall])[0]!.labelBBox).toBeNull()
   })
 })

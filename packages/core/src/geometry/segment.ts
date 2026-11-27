@@ -1,3 +1,4 @@
+import type { BBox } from './bbox'
 import { nearlyEqual } from './spline'
 import type { XYPoint } from './types'
 
@@ -19,6 +20,53 @@ export function projectOnSegment(p: XYPoint, a: XYPoint, b: XYPoint): { point: X
 
 /** A straight route segment. */
 export type Segment = [from: XYPoint, to: XYPoint]
+
+/**
+ * True when the segment passes through the interior of the box.
+ * A segment that only touches the box border or a corner does not intersect it.
+ */
+export function segmentIntersectsBox([a, b]: Segment, box: BBox): boolean {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  let t0 = 0
+  let t1 = 1
+  // Liang-Barsky clipping against the four box sides.
+  for (
+    const [p, q] of [
+      [-dx, a.x - box.x],
+      [dx, box.x + box.width - a.x],
+      [-dy, a.y - box.y],
+      [dy, box.y + box.height - a.y],
+    ] as const
+  ) {
+    if (p === 0) {
+      if (q <= 0) {
+        return false
+      }
+      continue
+    }
+    const t = q / p
+    if (p < 0) {
+      if (t > t1) {
+        return false
+      }
+      t0 = Math.max(t0, t)
+    } else {
+      if (t < t0) {
+        return false
+      }
+      t1 = Math.min(t1, t)
+    }
+  }
+  if (t0 >= t1) {
+    return false
+  }
+  // Liang-Barsky also accepts a segment lying on a box edge, so check the clipped midpoint.
+  const mid = (t0 + t1) / 2
+  const x = a.x + dx * mid
+  const y = a.y + dy * mid
+  return x > box.x && x < box.x + box.width && y > box.y && y < box.y + box.height
+}
 
 /**
  * True when `from` to `to` continues `previous` on the same axis and direction, within one unit.
